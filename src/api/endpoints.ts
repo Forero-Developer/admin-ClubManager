@@ -16,7 +16,6 @@ export const ENDPOINTS = {
     byId: (clubId: string, playerId: string) => `/admin/clubs/${clubId}/players/${playerId}`,
   },
   subscriptions: {
-    plans: '/admin/subscriptions/plans',
     list: '/admin/subscriptions',
     clubsWithPlans: '/admin/subscriptions/clubs-with-plans',
     payments: '/admin/subscriptions/payments',
@@ -27,5 +26,11 @@ export const ENDPOINTS = {
     extendSubscription: (clubId: string) => `/admin/subscriptions/clubs/${clubId}/extend-subscription`,
     updateDates: (clubId: string) => `/admin/subscriptions/clubs/${clubId}/dates`,
     downgradeToFree: (clubId: string) => `/admin/subscriptions/clubs/${clubId}/downgrade-to-free`,
+    plans: {
+      list: '/admin/subscriptions/plans',
+      create: '/admin/subscriptions/plans',
+      update: (id: string) => `/admin/subscriptions/plans/${id}`,
+      features: '/admin/subscriptions/features',
+    },
   },
 };

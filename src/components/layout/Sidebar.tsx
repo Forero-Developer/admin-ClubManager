@@ -1,13 +1,15 @@
 import { Link, useLocation } from 'react-router-dom';
-import { LayoutDashboard, Users, CreditCard, LogOut, ChevronLeft, ChevronRight } from 'lucide-react';
+import { LayoutDashboard, Users, CreditCard, LogOut, ChevronLeft, ChevronRight, Building2, Tags } from 'lucide-react';
 import { useUiStore } from '@/store/uiStore';
 import { useAuthStore } from '@/store/authStore';
 import { cn } from '@/lib/utils';
 
 const navigation = [
   { name: 'Dashboard', href: '/', icon: LayoutDashboard },
-  { name: 'Clubes', href: '/clubs', icon: Users },
+  { name: 'Clubes', href: '/clubs', icon: Building2 },
+  { name: 'Jugadores', href: '/players', icon: Users },
   { name: 'Suscripciones', href: '/subscriptions', icon: CreditCard },
+  { name: 'Planes', href: '/plans', icon: Tags },
 ];
 
 export function Sidebar() {

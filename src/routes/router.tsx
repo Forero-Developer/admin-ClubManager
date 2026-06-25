@@ -5,6 +5,7 @@ import { dashboardRoutes } from './dashboardRoutes';
 import { clubsRoutes } from './clubsRoutes';
 import { playersRoutes } from './playersRoutes';
 import { subscriptionsRoutes } from './subscriptionsRoutes';
+import { plansRoutes } from './plansRoutes';
 
 export const router = createBrowserRouter([
   {
@@ -15,6 +16,7 @@ export const router = createBrowserRouter([
       ...clubsRoutes,
       ...playersRoutes,
       ...subscriptionsRoutes,
+      ...plansRoutes,
     ],
   },
   ...authRoutes,
