@@ -2,6 +2,7 @@ export interface SubscriptionFilterQuery {
   page?: number;
   limit?: number;
   search?: string;
+  status?: string;
   billingStatus?: 'ACTIVE' | 'PAST_DUE' | 'SUSPENDED';
   billingMethod?: 'TRANSFER' | 'CARD' | 'CASH' | 'LINK';
 }
@@ -107,4 +108,37 @@ export interface SubscriptionPlan {
   description: string | null;
   features: PlanFeature[];
   pricing: PlanPricing[];
+}
+
+export interface PlanOverview extends SubscriptionPlan {
+  isActive: boolean;
+  sortOrder: number | null;
+  _count: {
+    activeClubs: number;
+    trialClubs: number;
+    pastDueClubs: number;
+  };
+  revenueThisMonth: number;
+}
+
+export interface SubscriptionStats {
+  byBillingStatus: Record<string, number>;
+  byBillingMethod: Record<string, number>;
+  payments: {
+    totalRevenue: number;
+    thisMonth: number;
+    pendingCount: number;
+  };
+}
+
+export interface RegisterPaymentDto {
+  newPriceId: string;
+  amount: number;
+  method: 'TRANSFER' | 'CARD' | 'CASH' | 'LINK';
+  transactionId: string;
+  periodMonth: number;
+  periodYear: number;
+  notes?: string;
+  reason?: string;
+  paymentDate?: string;
 }

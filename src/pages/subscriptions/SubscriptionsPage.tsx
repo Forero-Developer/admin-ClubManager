@@ -1,132 +1,136 @@
-import { useState } from 'react';
-import { useSubscriptions } from './hooks/useSubscriptions';
-import { Loader2, Search, Building2, Calendar } from 'lucide-react';
-import { Input } from '@/components/ui/Input';
+import { useSubscriptionOverview } from './hooks/useSubscriptions';
+import { Loader2, Plus, Users, AlertCircle, TrendingUp, Tag, ArrowRight } from 'lucide-react';
 import { Button } from '@/components/ui/Button';
-import { SubscriptionActions } from './components/SubscriptionActions';
-import { format } from 'date-fns';
-import { es } from 'date-fns/locale';
+import { StatsBar } from './components/StatsBar';
+import { Link } from 'react-router-dom';
 
 export function SubscriptionsPage() {
-  const [page, setPage] = useState(1);
-  const { data, isLoading, isError } = useSubscriptions({ page, limit: 10 });
+  const { data: plans, isLoading, isError } = useSubscriptionOverview();
 
-  const formatDate = (dateString?: string | null) => {
-    if (!dateString) return 'N/A';
-    return format(new Date(dateString), "d 'de' MMM, yyyy", { locale: es });
+  const formatCurrency = (amount: number, currency: string = 'COP') => {
+    return new Intl.NumberFormat('es-CO', { 
+      style: 'currency', 
+      currency,
+      minimumFractionDigits: 0
+    }).format(amount);
   };
 
   return (
     <div className="space-y-6">
       <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4">
         <div>
-          <h1 className="text-2xl font-bold tracking-tight text-text">Gestión de Suscripciones</h1>
-          <p className="text-text-secondary">Administra los planes, fechas de corte y periodos de prueba de todos los clubes.</p>
+          <h1 className="text-2xl font-bold tracking-tight text-text">Suscripciones y Planes</h1>
+          <p className="text-text-secondary">Visión global de los planes como producto y métricas de adopción.</p>
         </div>
+        <Link to="/plans">
+          <Button>
+            <Plus size={16} className="mr-2" />
+            Crear Plan
+          </Button>
+        </Link>
       </div>
 
-      <div className="flex items-center gap-4">
-        <div className="relative w-full max-w-sm">
-          <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-text-secondary" />
-          <Input 
-            placeholder="Buscar club por nombre..." 
-            className="pl-9"
-          />
-        </div>
-      </div>
+      <StatsBar />
 
       {isLoading ? (
         <div className="flex justify-center py-12">
           <Loader2 className="h-8 w-8 animate-spin text-primary" />
         </div>
       ) : isError ? (
-        <div className="text-center py-12 text-danger">Error al cargar las suscripciones.</div>
+        <div className="text-center py-12 text-danger">Error al cargar el resumen de planes.</div>
       ) : (
-        <div className="rounded-xl border border-border bg-surface shadow-sm overflow-hidden">
-          <div className="overflow-x-auto">
-            <table className="w-full text-sm text-left text-text">
-              <thead className="text-xs text-text-secondary uppercase bg-bg/50 border-b border-border">
-                <tr>
-                  <th scope="col" className="px-6 py-4 font-medium">Club</th>
-                  <th scope="col" className="px-6 py-4 font-medium">Estado</th>
-                  <th scope="col" className="px-6 py-4 font-medium">Plan Actual</th>
-                  <th scope="col" className="px-6 py-4 font-medium">Vencimiento Susc.</th>
-                  <th scope="col" className="px-6 py-4 font-medium text-right">Acciones</th>
-                </tr>
-              </thead>
-              <tbody className="divide-y divide-border">
-                {data?.data.map((sub) => (
-                  <tr key={sub.id} className="hover:bg-bg/50 transition-colors">
-                    <td className="px-6 py-4">
-                      <div className="flex items-center gap-3">
-                        {sub.logoUrl ? (
-                          <img src={sub.logoUrl} alt={sub.name} className="h-10 w-10 rounded-md object-cover border border-border" />
-                        ) : (
-                          <div className="h-10 w-10 rounded-md bg-primary-light text-primary flex items-center justify-center border border-border/50">
-                            <Building2 size={18} />
-                          </div>
-                        )}
-                        <div>
-                          <p className="font-medium text-text">{sub.name}</p>
-                          <p className="text-xs text-text-secondary">{sub.countryCode}</p>
-                        </div>
+        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6 mt-8">
+          {plans?.map((plan) => (
+            <div 
+              key={plan.id} 
+              className="rounded-xl border border-border bg-surface shadow-sm overflow-hidden flex flex-col transition-all hover:shadow-md"
+            >
+              <div className="p-6 border-b border-border/50">
+                <div className="flex justify-between items-start mb-4">
+                  <div>
+                    <h3 className="text-xl font-bold text-text flex items-center gap-2">
+                      <Tag size={18} className="text-primary" />
+                      {plan.name}
+                    </h3>
+                    {plan.isActive ? (
+                      <span className="inline-block mt-2 px-2.5 py-0.5 rounded-full text-xs font-medium bg-success/10 text-success">
+                        Activo
+                      </span>
+                    ) : (
+                      <span className="inline-block mt-2 px-2.5 py-0.5 rounded-full text-xs font-medium bg-danger/10 text-danger">
+                        Inactivo
+                      </span>
+                    )}
+                  </div>
+                  <div className="text-right">
+                    {plan.pricing.length > 0 ? (
+                      <div>
+                        <p className="text-xl font-bold text-primary">
+                          {formatCurrency(plan.pricing[0].price, plan.pricing[0].currency)}
+                        </p>
+                        <p className="text-xs text-text-secondary">
+                          /{plan.pricing[0].interval === 'MONTHLY' ? 'mes' : plan.pricing[0].interval}
+                        </p>
                       </div>
-                    </td>
-                    <td className="px-6 py-4">
-                      <div className="flex flex-col gap-1">
-                        <span className={`inline-flex w-fit items-center px-2.5 py-0.5 rounded-full text-xs font-medium ${
-                          sub.billingStatus === 'ACTIVE' ? 'bg-primary-light text-primary-dark' :
-                          sub.billingStatus === 'TRIAL' ? 'bg-yellow-100 text-yellow-800' :
-                          'bg-red-100 text-red-800'
-                        }`}>
-                          {sub.billingStatus}
-                        </span>
-                        {sub.billingStatus === 'TRIAL' && (
-                          <span className="text-xs text-text-secondary">Hasta {formatDate(sub.trialEndsAt)}</span>
-                        )}
-                      </div>
-                    </td>
-                    <td className="px-6 py-4">
-                      {sub.subscriptionPrice ? (
-                        <div>
-                          <p className="font-medium text-text">{sub.subscriptionPrice.plan.name}</p>
-                          <p className="text-xs text-text-secondary">
-                            {new Intl.NumberFormat('es-CO', { style: 'currency', currency: sub.subscriptionPrice.currency, minimumFractionDigits: 0 }).format(sub.subscriptionPrice.price)}/{sub.subscriptionPrice.interval}
-                          </p>
-                        </div>
-                      ) : (
-                        <span className="text-text-secondary">Sin plan</span>
-                      )}
-                    </td>
-                    <td className="px-6 py-4">
-                      <div className="flex items-center gap-2 text-text-secondary">
-                        <Calendar size={14} />
-                        <span>{formatDate(sub.subscriptionEnd)}</span>
-                      </div>
-                    </td>
-                    <td className="px-6 py-4 text-right">
-                      <SubscriptionActions club={sub} />
-                    </td>
-                  </tr>
-                ))}
-                {data?.data.length === 0 && (
-                  <tr>
-                    <td colSpan={5} className="px-6 py-12 text-center text-text-secondary">
-                      No hay clubes registrados aún.
-                    </td>
-                  </tr>
-                )}
-              </tbody>
-            </table>
-          </div>
-          
-          <div className="px-6 py-4 border-t border-border flex items-center justify-between text-sm text-text-secondary">
-            <span>Mostrando {data?.data.length || 0} de {data?.total || 0} clubes</span>
-            <div className="flex gap-2">
-              <Button variant="outline" size="sm" disabled={!data || data.page === 1} onClick={() => setPage(p => p - 1)}>Anterior</Button>
-              <Button variant="outline" size="sm" disabled={!data || data.page === data.lastPage} onClick={() => setPage(p => p + 1)}>Siguiente</Button>
+                    ) : (
+                      <p className="text-sm font-medium text-text-secondary">Sin precio</p>
+                    )}
+                  </div>
+                </div>
+                
+                <p className="text-sm text-text-secondary line-clamp-2 min-h-[40px]">
+                  {plan.description || "Sin descripción"}
+                </p>
+              </div>
+
+              <div className="p-6 bg-bg/30 grid grid-cols-2 gap-4 flex-1">
+                <div className="space-y-1">
+                  <p className="text-xs font-medium text-text-secondary uppercase tracking-wider flex items-center gap-1">
+                    <Users size={14} /> Activos
+                  </p>
+                  <p className="text-2xl font-semibold text-text">{plan._count.activeClubs}</p>
+                </div>
+                <div className="space-y-1">
+                  <p className="text-xs font-medium text-text-secondary uppercase tracking-wider flex items-center gap-1">
+                    <AlertCircle size={14} /> Trial
+                  </p>
+                  <p className="text-2xl font-semibold text-text">{plan._count.trialClubs}</p>
+                </div>
+                <div className="space-y-1">
+                  <p className="text-xs font-medium text-text-secondary uppercase tracking-wider text-danger/80 flex items-center gap-1">
+                    <AlertCircle size={14} /> En Mora
+                  </p>
+                  <p className="text-2xl font-semibold text-text">{plan._count.pastDueClubs}</p>
+                </div>
+                <div className="space-y-1">
+                  <p className="text-xs font-medium text-text-secondary uppercase tracking-wider text-success/80 flex items-center gap-1">
+                    <TrendingUp size={14} /> Ingresos (Mes)
+                  </p>
+                  <p className="text-lg font-semibold text-text truncate">
+                    {formatCurrency(plan.revenueThisMonth)}
+                  </p>
+                </div>
+              </div>
+
+              <div className="p-4 border-t border-border bg-surface mt-auto">
+                <Link to={`/plans`} className="w-full">
+                  <Button variant="outline" className="w-full justify-between hover:bg-primary/5 hover:text-primary hover:border-primary/30 transition-colors">
+                    <span>Gestionar Plan</span>
+                    <ArrowRight size={16} />
+                  </Button>
+                </Link>
+              </div>
             </div>
-          </div>
+          ))}
+          
+          {(!plans || plans.length === 0) && (
+            <div className="col-span-full py-12 text-center border-2 border-dashed border-border rounded-xl">
+              <p className="text-text-secondary">No hay planes disponibles en el resumen.</p>
+              <Link to="/plans" className="mt-4 inline-block">
+                <Button variant="outline">Crear un plan</Button>
+              </Link>
+            </div>
+          )}
         </div>
       )}
     </div>

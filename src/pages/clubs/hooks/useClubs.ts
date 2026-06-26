@@ -8,3 +8,11 @@ export function useClubs(params?: ClubListQuery) {
     queryFn: () => clubsService.getAll(params),
   });
 }
+
+export function useClubDetail(id: string) {
+  return useQuery({
+    queryKey: ['clubs', id],
+    queryFn: () => clubsService.getById(id),
+    enabled: !!id,
+  });
+}

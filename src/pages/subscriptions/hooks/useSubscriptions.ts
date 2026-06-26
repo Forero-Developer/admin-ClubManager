@@ -1,12 +1,28 @@
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import { subscriptionsService } from '@/services/subscriptions/subscriptions.service';
+import { clubsService } from '@/services/clubs/clubs.service';
 import type { 
   SubscriptionFilterQuery, 
   MigratePlanDto, 
   AssignTrialDto, 
   ExtendSubscriptionDto, 
-  UpdateDatesDto 
+  UpdateDatesDto,
+  RegisterPaymentDto,
 } from '@/services/subscriptions/subscriptions.types';
+
+export function useSubscriptionStats() {
+  return useQuery({
+    queryKey: ['subscriptions', 'stats'],
+    queryFn: () => subscriptionsService.getStats(),
+  });
+}
+
+export function useSubscriptionOverview() {
+  return useQuery({
+    queryKey: ['subscriptions', 'overview'],
+    queryFn: () => subscriptionsService.getOverview(),
+  });
+}
 
 export function useSubscriptions(params?: SubscriptionFilterQuery) {
   return useQuery({
@@ -53,10 +69,36 @@ export function useSubscriptionActions() {
     onSuccess: invalidateSubscriptions,
   });
 
+  const registerPayment = useMutation({
+    mutationFn: ({ clubId, data }: { clubId: string; data: RegisterPaymentDto }) =>
+      subscriptionsService.registerPayment(clubId, data),
+    onSuccess: invalidateSubscriptions,
+  });
+
+  const downgradeToFree = useMutation({
+    mutationFn: (clubId: string) => subscriptionsService.downgradeToFree(clubId),
+    onSuccess: invalidateSubscriptions,
+  });
+
+  const cancelSubscription = useMutation({
+    mutationFn: ({ clubId, reason }: { clubId: string; reason?: string }) => 
+      subscriptionsService.cancelSubscription(clubId, reason),
+    onSuccess: invalidateSubscriptions,
+  });
+
+  const deleteClub = useMutation({
+    mutationFn: (clubId: string) => clubsService.delete(clubId),
+    onSuccess: invalidateSubscriptions,
+  });
+
   return {
     migratePlan,
     assignTrial,
     extendSubscription,
     updateDates,
+    registerPayment,
+    downgradeToFree,
+    cancelSubscription,
+    deleteClub,
   };
 }

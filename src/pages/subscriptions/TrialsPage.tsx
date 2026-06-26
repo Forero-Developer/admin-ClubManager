@@ -1,21 +1,37 @@
 import { useState } from 'react';
-import { useClubs } from './hooks/useClubs';
-import { Link } from 'react-router-dom';
-import { Loader2, Search, MoreHorizontal, Building2, Users } from 'lucide-react';
+import { useSubscriptions } from './hooks/useSubscriptions';
+import { Loader2, Search, Building2, Calendar } from 'lucide-react';
 import { Input } from '@/components/ui/Input';
 import { Button } from '@/components/ui/Button';
-import { SubscriptionActions } from '../subscriptions/components/SubscriptionActions';
+import { SubscriptionActions } from './components/SubscriptionActions';
+import { format } from 'date-fns';
+import { es } from 'date-fns/locale';
+import { useDebounce } from '@/hooks/useDebounce';
 
-export function ClubsPage() {
+export function TrialsPage() {
   const [page, setPage] = useState(1);
-  const { data, isLoading, isError } = useClubs({ page, limit: 10 });
+  const [searchTerm, setSearchTerm] = useState('');
+  
+  const debouncedSearch = useDebounce(searchTerm, 500);
+
+  const { data, isLoading, isError } = useSubscriptions({ 
+    page, 
+    limit: 10,
+    search: debouncedSearch || undefined,
+    status: 'TRIAL',
+  });
+
+  const formatDate = (dateString?: string | null) => {
+    if (!dateString) return 'N/A';
+    return format(new Date(dateString), "d 'de' MMM, yyyy", { locale: es });
+  };
 
   return (
     <div className="space-y-6">
       <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4">
         <div>
-          <h1 className="text-2xl font-bold tracking-tight text-text">Gestión de Clubes</h1>
-          <p className="text-text-secondary">Visualiza y administra todos los clubes registrados en la plataforma.</p>
+          <h1 className="text-2xl font-bold tracking-tight text-text">Periodos de Prueba (Trials)</h1>
+          <p className="text-text-secondary">Monitorea clubes que están evaluando el producto.</p>
         </div>
       </div>
 
@@ -25,9 +41,13 @@ export function ClubsPage() {
           <Input 
             placeholder="Buscar club por nombre o email..." 
             className="pl-9"
+            value={searchTerm}
+            onChange={(e) => {
+              setSearchTerm(e.target.value);
+              setPage(1);
+            }}
           />
         </div>
-        <Button variant="outline">Filtros</Button>
       </div>
 
       {isLoading ? (
@@ -35,7 +55,7 @@ export function ClubsPage() {
           <Loader2 className="h-8 w-8 animate-spin text-primary" />
         </div>
       ) : isError ? (
-        <div className="text-center py-12 text-danger">Error al cargar los clubes.</div>
+        <div className="text-center py-12 text-danger">Error al cargar los trials.</div>
       ) : (
         <div className="rounded-xl border border-border bg-surface shadow-sm overflow-hidden">
           <div className="overflow-x-auto">
@@ -43,10 +63,8 @@ export function ClubsPage() {
               <thead className="text-xs text-text-secondary uppercase bg-bg/50 border-b border-border">
                 <tr>
                   <th scope="col" className="px-6 py-4 font-medium">Club</th>
-                  <th scope="col" className="px-6 py-4 font-medium">País</th>
-                  <th scope="col" className="px-6 py-4 font-medium">Estado SaaS</th>
-                  <th scope="col" className="px-6 py-4 font-medium">Suscripción</th>
-                  <th scope="col" className="px-6 py-4 font-medium">Jugadores</th>
+                  <th scope="col" className="px-6 py-4 font-medium">Plan Evaluado</th>
+                  <th scope="col" className="px-6 py-4 font-medium">Fechas</th>
                   <th scope="col" className="px-6 py-4 font-medium text-right">Acciones</th>
                 </tr>
               </thead>
@@ -69,20 +87,6 @@ export function ClubsPage() {
                       </div>
                     </td>
                     <td className="px-6 py-4">
-                      <div className="flex items-center gap-2">
-                        <span>{club.country.code}</span>
-                      </div>
-                    </td>
-                    <td className="px-6 py-4">
-                      <span className={`inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium ${
-                        club.billingStatus === 'ACTIVE' ? 'bg-primary-light text-primary-dark' :
-                        club.billingStatus === 'TRIAL' ? 'bg-yellow-100 text-yellow-800' :
-                        'bg-red-100 text-red-800'
-                      }`}>
-                        {club.billingStatus}
-                      </span>
-                    </td>
-                    <td className="px-6 py-4">
                       {club.subscriptionPrice ? (
                         <div>
                           <p className="font-medium text-text">{club.subscriptionPrice.plan.name}</p>
@@ -94,30 +98,24 @@ export function ClubsPage() {
                         <span className="text-text-secondary">Sin plan</span>
                       )}
                     </td>
-                    <td className="px-6 py-4 font-medium">
-                      {club._count.players}
+                    <td className="px-6 py-4">
+                      <div className="space-y-1">
+                        <div className="flex items-center gap-1.5 text-xs">
+                          <Calendar size={12} className="text-primary" />
+                          <span className="text-text-secondary w-16">Fin trial:</span>
+                          <span className="font-medium text-text">{formatDate(club.trialEndsAt)}</span>
+                        </div>
+                      </div>
                     </td>
                     <td className="px-6 py-4 text-right">
-                      <div className="flex justify-end gap-2">
-                        <Link to={`/clubs/${club.id}`}>
-                          <Button variant="outline" size="sm" className="h-8 gap-1 text-primary border-primary/50 hover:bg-primary-light">
-                            Ver Detalle
-                          </Button>
-                        </Link>
-                        <Link to={`/clubs/${club.id}/players`}>
-                          <Button variant="outline" size="sm" className="h-8 gap-1 text-text-secondary">
-                            <Users size={14} /> Jugadores
-                          </Button>
-                        </Link>
-                        <SubscriptionActions club={club as any} />
-                      </div>
+                      <SubscriptionActions club={club} />
                     </td>
                   </tr>
                 ))}
                 {data?.data.length === 0 && (
                   <tr>
-                    <td colSpan={6} className="px-6 py-12 text-center text-text-secondary">
-                      No hay clubes registrados aún.
+                    <td colSpan={4} className="px-6 py-12 text-center text-text-secondary">
+                      No hay clubes en periodo de prueba actualmente.
                     </td>
                   </tr>
                 )}
@@ -125,7 +123,6 @@ export function ClubsPage() {
             </table>
           </div>
           
-          {/* Paginación simple footer */}
           <div className="px-6 py-4 border-t border-border flex items-center justify-between text-sm text-text-secondary">
             <span>Mostrando {data?.data.length || 0} de {data?.total || 0} clubes</span>
             <div className="flex gap-2">

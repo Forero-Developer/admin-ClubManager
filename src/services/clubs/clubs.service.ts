@@ -8,4 +8,7 @@ export const clubsService = {
     
   getById: (id: string) => 
     apiClient.get<any, ClubDetail>(ENDPOINTS.clubs.byId(id)),
+    
+  delete: (id: string) =>
+    apiClient.delete<any, { message: string }>(ENDPOINTS.clubs.byId(id)),
 };

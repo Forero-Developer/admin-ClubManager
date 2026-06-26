@@ -9,6 +9,8 @@ const navigation = [
   { name: 'Clubes', href: '/clubs', icon: Building2 },
   { name: 'Jugadores', href: '/players', icon: Users },
   { name: 'Suscripciones', href: '/subscriptions', icon: CreditCard },
+  { name: 'Trials', href: '/subscriptions/trials', icon: Users },
+  { name: 'En Mora', href: '/subscriptions/grace', icon: CreditCard },
   { name: 'Planes', href: '/plans', icon: Tags },
 ];
 
