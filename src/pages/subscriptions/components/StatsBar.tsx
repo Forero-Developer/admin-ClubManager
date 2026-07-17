@@ -1,4 +1,4 @@
-import { Building2, AlertTriangle, CheckCircle2, DollarSign, Clock, XCircle, TrendingUp, Hourglass } from 'lucide-react';
+import { AlertTriangle, CheckCircle2, DollarSign, TrendingUp } from 'lucide-react';
 import { useSubscriptionStats } from '../hooks/useSubscriptions';
 
 export function StatsBar() {

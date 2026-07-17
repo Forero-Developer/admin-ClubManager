@@ -1,6 +1,6 @@
 import { useState } from 'react';
 import { useSubscriptions } from './hooks/useSubscriptions';
-import { Loader2, Search, Building2, Calendar, AlertOctagon } from 'lucide-react';
+import { Loader2, Search, Building2, AlertOctagon } from 'lucide-react';
 import { Input } from '@/components/ui/Input';
 import { Button } from '@/components/ui/Button';
 import { Link } from 'react-router-dom';

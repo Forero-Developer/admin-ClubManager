@@ -1,5 +1,5 @@
 import { Link, useLocation } from 'react-router-dom';
-import { LayoutDashboard, Users, CreditCard, LogOut, ChevronLeft, ChevronRight, Building2, Tags } from 'lucide-react';
+import { LayoutDashboard, CreditCard, LogOut, ChevronLeft, ChevronRight, Building2, Tags } from 'lucide-react';
 import { useUiStore } from '@/store/uiStore';
 import { useAuthStore } from '@/store/authStore';
 import { cn } from '@/lib/utils';

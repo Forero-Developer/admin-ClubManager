@@ -171,6 +171,8 @@ export interface AddOnOption {
   name: string;
   code: string;
   description: string | null;
+  price?: number;
+  currency?: string;
   pricing: Array<{
     id: string;
     price: number;

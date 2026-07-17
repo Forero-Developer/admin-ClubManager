@@ -35,9 +35,11 @@ export interface ClubListItem {
   country: { name: string; code: string; currency: string };
   sport: { name: string; code: string } | null;
   subscriptionPrice: {
+    id: string;
     price: number;
     currency: string;
     interval: string;
+    discount?: number;
     plan: { id: string; name: string };
   } | null;
   _count: {

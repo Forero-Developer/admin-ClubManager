@@ -185,13 +185,6 @@ export function ClubsPage() {
     updateParams({ orderByPlayers: orderByPlayers === direction ? undefined : direction, page: '1' });
   };
 
-  const clearSearch = () => {
-    setSearchInput('');
-    setMinPlayersInput('');
-    setMaxPlayersInput('');
-    updateParams({ search: undefined, minPlayers: undefined, maxPlayers: undefined, orderByPlayers: undefined, page: '1' });
-  };
-
   // Quick stats from data
   const totalShown = data?.data.length ?? 0;
   const totalClubs = data?.total ?? 0;

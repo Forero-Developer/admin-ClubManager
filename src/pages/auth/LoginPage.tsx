@@ -16,7 +16,7 @@ const loginSchema = z.object({
 type LoginForm = z.infer<typeof loginSchema>;
 
 export function LoginPage() {
-  const { token, setAuth } = useAuthStore();
+  const { token } = useAuthStore();
 
   const {
     register,
