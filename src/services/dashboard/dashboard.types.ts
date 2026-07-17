@@ -12,12 +12,17 @@ export interface DashboardStats {
       SUSPENDED: number;
     };
     newClubsThisMonth: number;
+    newClubsYtd: number;
     deltaPreviousMonth: number;
     mrr: number;
+    arpu: number;
     revenueThisMonth: number;
     revenuePreviousMonth: number;
+    revenueYtd: number;
     conversionRate: number;
     churnRate: number;
+    totalPlayers: number;
+    newPlayersThisMonth: number;
   };
   distributions: {
     byCountry: DistributionItem[];

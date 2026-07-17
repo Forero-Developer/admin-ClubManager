@@ -3,7 +3,7 @@ import { useSubscriptions } from './hooks/useSubscriptions';
 import { Loader2, Search, Building2, Calendar } from 'lucide-react';
 import { Input } from '@/components/ui/Input';
 import { Button } from '@/components/ui/Button';
-import { SubscriptionActions } from './components/SubscriptionActions';
+import { Link } from 'react-router-dom';
 import { format } from 'date-fns';
 import { es } from 'date-fns/locale';
 import { useDebounce } from '@/hooks/useDebounce';
@@ -108,7 +108,9 @@ export function TrialsPage() {
                       </div>
                     </td>
                     <td className="px-6 py-4 text-right">
-                      <SubscriptionActions club={club} />
+                      <Link to={`/clubs/${club.id}`} className="text-xs font-semibold text-primary hover:underline">
+                        Gestionar
+                      </Link>
                     </td>
                   </tr>
                 ))}

@@ -25,14 +25,17 @@ export interface PlanPricing {
 export interface SubscriptionPlan {
   id: string;
   name: string;
+  description: string | null;
   createdAt: string;
   isActive: boolean;
+  sortOrder: number | null;
   features: PlanFeature[];
   pricing: PlanPricing[];
 }
 
 export interface CreatePlanDto {
   name: string;
+  description?: string;
   features: Array<{ featureId: string; value: string }>;
   pricing: Array<{
     price: number;
@@ -43,7 +46,19 @@ export interface CreatePlanDto {
   }>;
 }
 
-export interface UpdatePlanDto extends Partial<CreatePlanDto> {}
+export interface UpdatePlanDto {
+  name?: string;
+  description?: string;
+  isActive?: boolean;
+  features?: Array<{ featureId: string; value: string }>;
+  pricing?: Array<{
+    price: number;
+    interval: 'MONTHLY' | 'QUARTERLY' | 'SEMIANNUAL' | 'YEARLY';
+    currency: string;
+    countryCode: string;
+    discount?: number;
+  }>;
+}
 
 export interface BaseFeature {
   id: string;

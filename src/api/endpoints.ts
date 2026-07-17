@@ -6,6 +6,8 @@ export const ENDPOINTS = {
   },
   dashboard: {
     stats: '/admin/dashboard/stats',
+    churnedClubs: '/admin/dashboard/churned-clubs',
+    mrrClubs: '/admin/dashboard/mrr-clubs',
   },
   clubs: {
     list: '/admin/clubs',
@@ -22,6 +24,7 @@ export const ENDPOINTS = {
     clubsWithPlans: '/admin/subscriptions/clubs-with-plans',
     payments: '/admin/subscriptions/payments',
     clubPayments: (clubId: string) => `/admin/subscriptions/clubs/${clubId}/payments`,
+    revertPayment: (clubId: string, paymentId: string) => `/admin/subscriptions/clubs/${clubId}/payments/${paymentId}/revert`,
     planHistory: (clubId: string) => `/admin/subscriptions/clubs/${clubId}/plan-history`,
     migratePlan: (clubId: string) => `/admin/subscriptions/clubs/${clubId}/migrate-plan`,
     registerPayment: (clubId: string) => `/admin/subscriptions/clubs/${clubId}/register-payment`,
@@ -30,11 +33,21 @@ export const ENDPOINTS = {
     updateDates: (clubId: string) => `/admin/subscriptions/clubs/${clubId}/dates`,
     downgradeToFree: (clubId: string) => `/admin/subscriptions/clubs/${clubId}/downgrade-to-free`,
     cancelSubscription: (clubId: string) => `/admin/subscriptions/clubs/${clubId}/cancel`,
+    resolveDebts: (clubId: string) => `/admin/subscriptions/clubs/${clubId}/resolve-debts`,
+    assignAddOn: (clubId: string) => `/admin/subscriptions/clubs/${clubId}/addons`,
     plans: {
       list: '/admin/subscriptions/plans',
       create: '/admin/subscriptions/plans',
       update: (id: string) => `/admin/subscriptions/plans/${id}`,
+      delete: (id: string) => `/admin/subscriptions/plans/${id}`,
       features: '/admin/subscriptions/features',
+    },
+    analytics: '/admin/subscriptions/analytics',
+    addons: {
+      list: '/admin/subscriptions/addons',
+      create: '/admin/subscriptions/addons',
+      update: (id: string) => `/admin/subscriptions/addons/${id}`,
+      delete: (id: string) => `/admin/subscriptions/addons/${id}`,
     },
   },
 };

@@ -13,7 +13,11 @@ import type {
   ExtendSubscriptionDto,
   UpdateDatesDto,
   SubscriptionStats,
-  RegisterPaymentDto
+  RegisterPaymentDto,
+  ResolveDebtsDto,
+  AssignAddOnDto,
+  AddOnOption,
+  SubscriptionAnalytics,
 } from './subscriptions.types';
 
 export const subscriptionsService = {
@@ -38,6 +42,9 @@ export const subscriptionsService = {
   getClubPayments: (clubId: string, params?: PaymentFilterQuery) => 
     apiClient.get<any, PaginatedResult<PaymentListItem>>(ENDPOINTS.subscriptions.clubPayments(clubId), { params }),
     
+  revertPayment: (clubId: string, paymentId: string) =>
+    apiClient.post<any, { success: boolean; message: string }>(ENDPOINTS.subscriptions.revertPayment(clubId, paymentId)),
+    
   getPlanHistory: (clubId: string) => 
     apiClient.get<any, any[]>(ENDPOINTS.subscriptions.planHistory(clubId)),
     
@@ -61,4 +68,25 @@ export const subscriptionsService = {
     
   cancelSubscription: (clubId: string, reason?: string) => 
     apiClient.post<any, any>(ENDPOINTS.subscriptions.cancelSubscription(clubId), { reason }),
+
+  resolveDebts: (clubId: string, data?: ResolveDebtsDto) =>
+    apiClient.post<any, { success: boolean; message: string }>(ENDPOINTS.subscriptions.resolveDebts(clubId), data || {}),
+
+  assignManualAddOn: (clubId: string, data: AssignAddOnDto) =>
+    apiClient.post<any, any>(ENDPOINTS.subscriptions.assignAddOn(clubId), data),
+
+  getAddOns: () =>
+    apiClient.get<any, AddOnOption[]>(ENDPOINTS.subscriptions.addons.list),
+
+  getAnalytics: () =>
+    apiClient.get<any, SubscriptionAnalytics>(ENDPOINTS.subscriptions.analytics),
+
+  createAddOn: (data: any) =>
+    apiClient.post<any, any>(ENDPOINTS.subscriptions.addons.create, data),
+    
+  updateAddOn: (id: string, data: any) =>
+    apiClient.put<any, any>(ENDPOINTS.subscriptions.addons.update(id), data),
+
+  deleteAddOn: (id: string) =>
+    apiClient.delete<any, any>(ENDPOINTS.subscriptions.addons.delete(id)),
 };

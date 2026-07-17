@@ -11,6 +11,7 @@ import type { SubscriptionPlan, BaseFeature } from '@/services/plans/plans.types
 
 const planSchema = z.object({
   name: z.string().min(1, 'El nombre es requerido'),
+  description: z.string().optional(),
   pricing: z.array(z.object({
     id: z.string().optional(),
     price: z.number({ error: 'El precio debe ser un número' }).min(0, 'El precio debe ser 0 o mayor'),
@@ -113,6 +114,7 @@ export function PlanFormModal({ plan, onClose }: Props) {
     resolver: zodResolver(planSchema),
     defaultValues: {
       name: '',
+      description: '',
       pricing: [{ price: 0, interval: 'MONTHLY', currency: 'COP', countryCode: 'CO' }],
       features: [],
     }
@@ -135,6 +137,7 @@ export function PlanFormModal({ plan, onClose }: Props) {
     if (plan) {
       reset({
         name: plan.name,
+        description: plan.description ?? '',
         pricing: plan.pricing.map(p => ({
           id: p.id,
           price: p.price,
@@ -183,6 +186,17 @@ export function PlanFormModal({ plan, onClose }: Props) {
               <label className="block text-sm font-medium mb-1">Nombre del Plan</label>
               <Input {...register('name')} placeholder="Ej. Premium" className={errors.name ? 'border-danger' : ''} />
               {errors.name && <p className="text-xs text-danger mt-1">{errors.name.message}</p>}
+            </div>
+
+            {/* Descripción */}
+            <div>
+              <label className="block text-sm font-medium mb-1">Descripción <span className="text-text-secondary font-normal">(opcional)</span></label>
+              <textarea
+                {...register('description')}
+                placeholder="Describe brevemente este plan y para quién está orientado..."
+                rows={2}
+                className="w-full border border-border rounded-md px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-primary/50 resize-none"
+              />
             </div>
 
             {/* Pricing Section */}

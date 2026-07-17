@@ -7,4 +7,5 @@ export const plansService = {
   getFeatures: () => apiClient.get<any, BaseFeature[]>(ENDPOINTS.subscriptions.plans.features),
   create: (data: CreatePlanDto) => apiClient.post<any, SubscriptionPlan>(ENDPOINTS.subscriptions.plans.create, data),
   update: (id: string, data: UpdatePlanDto) => apiClient.put<any, SubscriptionPlan>(ENDPOINTS.subscriptions.plans.update(id), data),
+  delete: (id: string) => apiClient.delete<any, { id: string }>(ENDPOINTS.subscriptions.plans.delete(id)),
 };

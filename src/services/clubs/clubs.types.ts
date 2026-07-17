@@ -5,6 +5,9 @@ export interface ClubListQuery {
   status?: 'TRIAL' | 'ACTIVE' | 'PAST_DUE' | 'SUSPENDED';
   countryCode?: string;
   sportId?: string;
+  minPlayers?: number;
+  maxPlayers?: number;
+  orderByPlayers?: 'asc' | 'desc';
 }
 
 export interface PaginatedResult<T> {
@@ -42,6 +45,10 @@ export interface ClubListItem {
     coaches: number;
     users: number;
   };
+  users: Array<{
+    email: string;
+    googleId: string | null;
+  }>;
 }
 
 export interface ClubDetail extends ClubListItem {

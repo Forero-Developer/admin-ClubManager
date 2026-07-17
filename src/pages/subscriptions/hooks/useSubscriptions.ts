@@ -8,6 +8,8 @@ import type {
   ExtendSubscriptionDto, 
   UpdateDatesDto,
   RegisterPaymentDto,
+  ResolveDebtsDto,
+  AssignAddOnDto,
 } from '@/services/subscriptions/subscriptions.types';
 
 export function useSubscriptionStats() {
@@ -38,11 +40,34 @@ export function usePlans() {
   });
 }
 
+export function useAddOns() {
+  return useQuery({
+    queryKey: ['addons'],
+    queryFn: () => subscriptionsService.getAddOns(),
+  });
+}
+
+export function useAnalytics() {
+  return useQuery({
+    queryKey: ['subscriptions', 'analytics'],
+    queryFn: () => subscriptionsService.getAnalytics(),
+  });
+}
+
+export function useClubPayments(clubId: string) {
+  return useQuery({
+    queryKey: ['clubPayments', clubId],
+    queryFn: () => subscriptionsService.getClubPayments(clubId),
+    enabled: !!clubId,
+  });
+}
+
 export function useSubscriptionActions() {
   const queryClient = useQueryClient();
 
   const invalidateSubscriptions = () => {
     queryClient.invalidateQueries({ queryKey: ['subscriptions'] });
+    queryClient.invalidateQueries({ queryKey: ['clubs'] });
   };
 
   const migratePlan = useMutation({
@@ -91,6 +116,24 @@ export function useSubscriptionActions() {
     onSuccess: invalidateSubscriptions,
   });
 
+  const resolveDebts = useMutation({
+    mutationFn: ({ clubId, data }: { clubId: string; data?: ResolveDebtsDto }) =>
+      subscriptionsService.resolveDebts(clubId, data),
+    onSuccess: invalidateSubscriptions,
+  });
+
+  const assignManualAddOn = useMutation({
+    mutationFn: ({ clubId, data }: { clubId: string; data: AssignAddOnDto }) =>
+      subscriptionsService.assignManualAddOn(clubId, data),
+    onSuccess: invalidateSubscriptions,
+  });
+
+  const revertPayment = useMutation({
+    mutationFn: ({ clubId, paymentId }: { clubId: string; paymentId: string }) =>
+      subscriptionsService.revertPayment(clubId, paymentId),
+    onSuccess: invalidateSubscriptions,
+  });
+
   return {
     migratePlan,
     assignTrial,
@@ -100,5 +143,8 @@ export function useSubscriptionActions() {
     downgradeToFree,
     cancelSubscription,
     deleteClub,
+    resolveDebts,
+    assignManualAddOn,
+    revertPayment,
   };
 }

@@ -5,6 +5,7 @@ export interface SubscriptionFilterQuery {
   status?: string;
   billingStatus?: 'ACTIVE' | 'PAST_DUE' | 'SUSPENDED';
   billingMethod?: 'TRANSFER' | 'CARD' | 'CASH' | 'LINK';
+  addonCount?: number;
 }
 
 export interface PaymentFilterQuery {
@@ -81,6 +82,7 @@ export interface PaymentListItem {
   notes: string | null;
   clubId: string | null;
   club: { name: string } | null;
+  createdAt?: string;
 }
 
 export interface PlanFeature {
@@ -115,24 +117,35 @@ export interface PlanOverview extends SubscriptionPlan {
   sortOrder: number | null;
   _count: {
     activeClubs: number;
-    trialClubs: number;
     pastDueClubs: number;
+    suspendedClubs: number;
   };
   revenueThisMonth: number;
 }
 
 export interface SubscriptionStats {
+  byStatus: Record<string, number>;
   byBillingStatus: Record<string, number>;
   byBillingMethod: Record<string, number>;
+  byInterval: Record<string, number>;
+  byPlan: Record<string, number>;
   payments: {
     totalRevenue: number;
     thisMonth: number;
     pendingCount: number;
+    pendingAddOnsAmount: number;
+    pendingAddOnsCount: number;
   };
 }
 
+export interface PaymentAddOnDto {
+  addOnId: string;
+  quantity: number;
+}
+
 export interface RegisterPaymentDto {
-  newPriceId: string;
+  newPriceId?: string;
+  addOns?: PaymentAddOnDto[];
   amount: number;
   method: 'TRANSFER' | 'CARD' | 'CASH' | 'LINK';
   transactionId: string;
@@ -141,4 +154,51 @@ export interface RegisterPaymentDto {
   notes?: string;
   reason?: string;
   paymentDate?: string;
+}
+
+export interface ResolveDebtsDto {
+  transactionId?: string;
+}
+
+export interface AssignAddOnDto {
+  addOnId: string;
+  quantity: number;
+  notes?: string;
+}
+
+export interface AddOnOption {
+  id: string;
+  name: string;
+  code: string;
+  description: string | null;
+  pricing: Array<{
+    id: string;
+    price: number;
+    currency: string;
+    interval: string;
+  }>;
+}
+
+export interface AnalyticsTierEntry {
+  addOnCount: number;
+  clubCount: number;
+  baseRevenue: number;
+  addonRevenue: number;
+  totalRevenue: number;
+  label: string;
+}
+
+export interface MonthlyRevenueEntry {
+  year: number;
+  month: number;
+  amount: number;
+}
+
+export interface SubscriptionAnalytics {
+  totalRevenue: number;
+  baseRevenue: number;
+  addonRevenue: number;
+  byStatus: Record<string, number>;
+  tierBreakdown: AnalyticsTierEntry[];
+  monthlyRevenue: MonthlyRevenueEntry[];
 }
