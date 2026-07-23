@@ -1,5 +1,5 @@
 import { useState } from 'react';
-import { CreditCard, Calendar, Gift, Settings, ArrowRightLeft, CheckCircle2, History, XCircle, AlertTriangle, Clock } from 'lucide-react';
+import { CreditCard, Calendar, Gift, Settings, ArrowRightLeft, CheckCircle2, History, XCircle, AlertTriangle, Clock, Check } from 'lucide-react';
 import { format } from 'date-fns';
 import { es } from 'date-fns/locale';
 import { useClubPayments, useSubscriptionActions } from '../../subscriptions/hooks/useSubscriptions';
@@ -14,7 +14,7 @@ interface ClubBillingTabProps {
 export function ClubBillingTab({ club }: ClubBillingTabProps) {
   const [activeModal, setActiveModal] = useState<'payment' | 'extend' | 'addons' | null>(null);
   const { data: payments, isLoading: paymentsLoading } = useClubPayments(club.id);
-  const { cancelSubscription } = useSubscriptionActions();
+  const { cancelSubscription, approveTransaction } = useSubscriptionActions();
 
   const formatCurrency = (amount?: number | null, currency = 'COP') => {
     if (!amount && amount !== 0) return 'N/A';
@@ -205,9 +205,45 @@ export function ClubBillingTab({ club }: ClubBillingTabProps) {
                      payment.status === 'PENDING' ? <Clock size={16} /> : <XCircle size={16} />}
                   </div>
                 </div>
-                <div className="mt-auto pt-3 border-t border-border/50 text-xs text-text-secondary flex items-center justify-between">
-                  <span className="truncate">{payment.method}</span>
-                  <span className="opacity-70">{formatDate(payment.createdAt)}</span>
+                <div className="mt-auto pt-3 border-t border-border/50 text-xs text-text-secondary flex flex-col gap-1.5">
+                  <div className="flex items-center justify-between">
+                    <span className="truncate">{payment.method}</span>
+                    <span className="opacity-70">
+                      {new Date(payment.createdAt).toLocaleString('es-CO', { 
+                        day: 'numeric', month: 'short', year: '2-digit', 
+                        hour: '2-digit', minute: '2-digit' 
+                      })}
+                    </span>
+                  </div>
+                  {payment.notes && (
+                    <div className="flex items-start justify-between gap-2 mt-0.5 pt-1 border-t border-border/30">
+                      <span className="text-[10px] italic opacity-80 line-clamp-2" title={payment.notes}>
+                        {payment.notes}
+                      </span>
+                      {payment.status === 'PENDING' && (
+                        <button
+                          onClick={() => approveTransaction.mutate({ clubId: club.id, transactionId: payment.id })}
+                          disabled={approveTransaction.isPending}
+                          className="flex items-center justify-center p-1 bg-green-50 text-green-600 hover:bg-green-100 hover:text-green-700 rounded-md transition-colors"
+                          title="Aprobar pago manualmente"
+                        >
+                          <Check size={14} />
+                        </button>
+                      )}
+                    </div>
+                  )}
+                  {!payment.notes && payment.status === 'PENDING' && (
+                    <div className="flex justify-end mt-1">
+                      <button
+                        onClick={() => approveTransaction.mutate({ clubId: club.id, transactionId: payment.id })}
+                        disabled={approveTransaction.isPending}
+                        className="flex items-center justify-center p-1 bg-green-50 text-green-600 hover:bg-green-100 hover:text-green-700 rounded-md transition-colors"
+                        title="Aprobar pago manualmente"
+                      >
+                        <Check size={14} />
+                      </button>
+                    </div>
+                  )}
                 </div>
               </div>
             ))}

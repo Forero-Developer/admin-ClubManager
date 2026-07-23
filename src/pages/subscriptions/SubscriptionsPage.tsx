@@ -1,5 +1,5 @@
 import { useState } from 'react';
-import { useSubscriptionStats, useSubscriptions, useAnalytics } from './hooks/useSubscriptions';
+import { useSubscriptionStats, useSubscriptions, useAnalytics, useTransactions } from './hooks/useSubscriptions';
 import {
   Plus, TrendingUp, CreditCard,
   CheckCircle2, AlertTriangle, DollarSign,
@@ -127,6 +127,44 @@ function TierBreakdown({ tiers }: { tiers: any[] }) {
 }
 
 
+// ── Addon Performance Dashboard ────────────────────────────────────────────────
+function AddOnsPerformance({ metrics }: { metrics?: { performance: any[]; topClubs: any[] } }) {
+  if (!metrics || metrics.performance.length === 0) return <p className="text-xs text-text-secondary text-center py-4">No hay ventas de addons registradas.</p>;
+  
+  return (
+    <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+      <div>
+        <h4 className="text-[10px] uppercase font-bold tracking-wider text-text-secondary mb-3">Ingresos por AddOn</h4>
+        <div className="space-y-3">
+          {metrics.performance.map(item => (
+            <div key={item.id} className="flex justify-between items-center bg-bg/50 p-2 rounded-lg border border-border">
+              <div>
+                <p className="text-xs font-semibold text-text">{item.name}</p>
+                <p className="text-[10px] text-text-secondary">{item.count} ventas realizadas</p>
+              </div>
+              <p className="text-xs font-bold text-primary">{formatCurrency(item.revenue)}</p>
+            </div>
+          ))}
+        </div>
+      </div>
+      <div>
+        <h4 className="text-[10px] uppercase font-bold tracking-wider text-text-secondary mb-3">Top Clubes</h4>
+        <div className="space-y-3">
+          {metrics.topClubs.map(item => (
+            <div key={item.clubId} className="flex justify-between items-center bg-bg/50 p-2 rounded-lg border border-border">
+              <div>
+                <p className="text-xs font-semibold text-text truncate w-32">{item.clubName}</p>
+                <p className="text-[10px] text-text-secondary">{item.count} paquetes</p>
+              </div>
+              <p className="text-xs font-bold text-text">{formatCurrency(item.revenue)}</p>
+            </div>
+          ))}
+        </div>
+      </div>
+    </div>
+  );
+}
+
 // ── Subscription table row ────────────────────────────────────────────────────
 function SubRow({ club }: { club: any }) {
   const cfg = STATUS_CONFIG[club.status] ?? STATUS_CONFIG.ACTIVE;
@@ -184,12 +222,15 @@ function SubRow({ club }: { club: any }) {
 // ── Main page ─────────────────────────────────────────────────────────────────
 export function SubscriptionsPage() {
   const [page, setPage] = useState(1);
+  const [txPage, setTxPage] = useState(1);
   const [filters, setFilters] = useState<SubscriptionFilterQuery>({ limit: 15 });
   const [searchInput, setSearchInput] = useState('');
+  const [activeTab, setActiveTab] = useState<'management' | 'metrics' | 'history'>('management');
 
   const { data: stats, isLoading: statsLoading } = useSubscriptionStats();
   const { data: analytics, isLoading: analyticsLoading } = useAnalytics();
   const { data: subs, isLoading: subsLoading } = useSubscriptions({ ...filters, page });
+  const { data: txs, isLoading: txsLoading } = useTransactions({ page: txPage, limit: 15 });
 
   const setStatusFilter = (s: string) => setFilters(f => f.status === s ? { ...f, status: undefined } : { ...f, status: s, page: 1 });
   const setBillingMethodFilter = (m: 'TRANSFER' | 'CARD' | 'CASH' | 'LINK') => setFilters(f => f.billingMethod === m ? { ...f, billingMethod: undefined } : { ...f, billingMethod: m, page: 1 });
@@ -219,21 +260,45 @@ export function SubscriptionsPage() {
         </div>
       </div>
 
-      {/* ── OVERVIEW / KPIs ── */}
-      <div className="space-y-4">
-        {statsLoading || analyticsLoading ? (
-          <div className="grid grid-cols-2 lg:grid-cols-5 gap-4">
-            {Array.from({ length: 5 }).map((_, i) => <div key={i} className="h-20 animate-pulse bg-white border border-border rounded-xl" />)}
-          </div>
+      {/* Tabs */}
+      <div className="flex items-center gap-6 border-b border-border/60">
+        <button
+          onClick={() => setActiveTab('management')}
+          className={`pb-3 text-sm font-medium transition-colors relative ${activeTab === 'management' ? 'text-primary' : 'text-text-secondary hover:text-text'}`}
+        >
+          Gestión de Clubes
+          {activeTab === 'management' && <span className="absolute bottom-0 left-0 w-full h-0.5 bg-primary rounded-t-full" />}
+        </button>
+        <button
+          onClick={() => setActiveTab('metrics')}
+          className={`pb-3 text-sm font-medium transition-colors relative ${activeTab === 'metrics' ? 'text-primary' : 'text-text-secondary hover:text-text'}`}
+        >
+          Métricas y Análisis
+          {activeTab === 'metrics' && <span className="absolute bottom-0 left-0 w-full h-0.5 bg-primary rounded-t-full" />}
+        </button>
+        <button
+          onClick={() => setActiveTab('history')}
+          className={`pb-3 text-sm font-medium transition-colors relative ${activeTab === 'history' ? 'text-primary' : 'text-text-secondary hover:text-text'}`}
+        >
+          Historial de Compras
+          {activeTab === 'history' && <span className="absolute bottom-0 left-0 w-full h-0.5 bg-primary rounded-t-full" />}
+        </button>
+      </div>
+
+      {activeTab === 'metrics' && (
+        <div className="space-y-4 animate-in fade-in duration-300">
+          {statsLoading || analyticsLoading ? (
+            <div className="grid grid-cols-2 lg:grid-cols-4 gap-4">
+              {Array.from({ length: 4 }).map((_, i) => <div key={i} className="h-20 animate-pulse bg-white border border-border rounded-xl" />)}
+            </div>
         ) : (
-          <div className="grid grid-cols-2 lg:grid-cols-5 gap-4">
-            <MiniStat label="Ingresos del mes"      value={formatCurrency(stats?.payments?.thisMonth ?? 0)}   sub={`${stats?.payments?.pendingCount ?? 0} pendientes`} icon={<DollarSign size={20} className="text-primary" />}         accent="border-primary/20" />
+          <div className="grid grid-cols-2 lg:grid-cols-4 gap-4">
+            <MiniStat label="Suscripciones y Jugadores" value={formatCurrency((analytics?.baseRevenue ?? 0) + (analytics?.recurringAddonRevenue ?? 0))} sub="Ingresos recurrentes" icon={<TrendingUp size={20} className="text-blue-500" />} accent="border-blue-200" />
+            <MiniStat label="Mensajes de WSP (Pagos Únicos)" value={formatCurrency(analytics?.oneTimeAddonRevenue ?? 0)} sub="Paquetes de mensajes" icon={<Package size={20} className="text-purple-500" />} accent="border-purple-200" />
             <MiniStat label="Ticket Promedio"       value={formatCurrency(
-              (analytics?.tierBreakdown?.reduce((acc, t) => acc + t.totalRevenue, 0) ?? 0) / 
-              (analytics?.tierBreakdown?.reduce((acc, t) => acc + t.clubCount, 0) || 1)
-            )}                                                                                        sub="Media por club activo"                               icon={<BarChart3 size={20} className="text-purple-500" />}    accent="border-purple-200" />
-            <MiniStat label="Ingresos totales"      value={formatCurrency(analytics?.totalRevenue ?? 0)}       sub={`Addons: ${formatCurrency(analytics?.addonRevenue ?? 0)}`} icon={<TrendingUp size={20} className="text-blue-500" />} accent="border-blue-100" />
-            <MiniStat label="Clubes activos"        value={active.toString()}                                   sub={`${trial} en trial`}                                 icon={<CheckCircle2 size={20} className="text-success" />}     accent="border-success/20" />
+              (analytics?.tierBreakdown?.reduce((acc: any, t: any) => acc + t.totalRevenue, 0) ?? 0) / 
+              (analytics?.tierBreakdown?.reduce((acc: any, t: any) => acc + t.clubCount, 0) || 1)
+            )}                                                                                        sub="Media por club activo"                               icon={<BarChart3 size={20} className="text-green-500" />}    accent="border-green-200" />
             <MiniStat label="En mora / Suspendidos" value={(pastDue + suspended).toString()}                    sub={`${pastDue} mora · ${suspended} susp.`}               icon={<AlertTriangle size={20} className="text-amber-500" />}  accent={pastDue + suspended > 0 ? 'border-amber-200' : 'border-border'} />
           </div>
         )}
@@ -276,10 +341,44 @@ export function SubscriptionsPage() {
             </div>
           </div>
         )}
-      </div>
+
+        {/* ── ROW 3: AddOns Específicos ── */}
+        {!analyticsLoading && !statsLoading && analytics?.addonMetrics && (
+          <div className="bg-white border border-border rounded-xl p-5 shadow-sm">
+            <div className="flex justify-between items-start mb-4">
+              <div>
+                <p className="text-xs font-bold text-text uppercase tracking-wider flex items-center gap-1.5">
+                  <Package size={12} className="text-primary" /> Rendimiento de Add-Ons (Excl. Jugadores)
+                </p>
+                <p className="text-[10px] text-text-secondary mt-0.5">Ingresos y adopción de paquetes como WhatsApp</p>
+              </div>
+            </div>
+            <AddOnsPerformance metrics={analytics.addonMetrics} />
+          </div>
+        )}
+          {/* Row 3: Gráficas adicionales al final */}
+          {analyticsLoading ? (
+            <div className="h-48 animate-pulse bg-white border border-border rounded-xl" />
+          ) : analytics && (
+            <div className="bg-white border border-border rounded-xl p-5 shadow-sm mt-4">
+              <div className="flex justify-between items-start mb-1">
+                <div>
+                  <p className="text-xs font-bold text-text uppercase tracking-wider flex items-center gap-1.5">
+                    <CalendarDays size={12} className="text-primary" /> Histórico de Ingresos (Últimos 12 meses)
+                  </p>
+                  <p className="text-[10px] text-text-secondary mt-0.5">Pagos SaaS completados</p>
+                </div>
+                <p className="text-xs font-bold text-primary">{formatCurrency(analytics.totalRevenue)}</p>
+              </div>
+              <MonthlyChart data={analytics.monthlyRevenue} />
+            </div>
+          )}
+        </div>
+      )}
 
       {/* ── LIST view & Filters ── */}
-      <div className="space-y-4">
+      {activeTab === 'management' && (
+        <div className="space-y-4 animate-in fade-in duration-300">
         <div className="flex flex-wrap gap-2 items-center">
           <div className="relative">
             <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-3.5 w-3.5 text-text-secondary" />
@@ -368,25 +467,77 @@ export function SubscriptionsPage() {
           )}
         </div>
       </div>
-
-      {/* Row 3: Gráficas adicionales al final */}
-      {analyticsLoading ? (
-        <div className="h-48 animate-pulse bg-white border border-border rounded-xl" />
-      ) : analytics && (
-        <div className="bg-white border border-border rounded-xl p-5 shadow-sm mt-4">
-          <div className="flex justify-between items-start mb-1">
-            <div>
-              <p className="text-xs font-bold text-text uppercase tracking-wider flex items-center gap-1.5">
-                <CalendarDays size={12} className="text-primary" /> Histórico de Ingresos (Últimos 12 meses)
-              </p>
-              <p className="text-[10px] text-text-secondary mt-0.5">Pagos SaaS completados</p>
-            </div>
-            <p className="text-xs font-bold text-primary">{formatCurrency(analytics.totalRevenue)}</p>
-          </div>
-          <MonthlyChart data={analytics.monthlyRevenue} />
-        </div>
       )}
 
+      {activeTab === 'history' && (
+        <div className="space-y-4 animate-in fade-in duration-300">
+          <div className="rounded-xl border border-border bg-white shadow-sm overflow-hidden">
+            <div className="p-4 border-b border-border bg-bg/50">
+              <h2 className="text-sm font-bold text-text flex items-center gap-2">
+                <ReceiptText size={16} className="text-primary" /> Transacciones Exitosas Recientes
+              </h2>
+            </div>
+            <div className="overflow-x-auto">
+              <table className="w-full text-sm text-left">
+                <thead className="text-[10px] text-text-secondary uppercase bg-bg/50 border-b border-border">
+                  <tr>
+                    <th className="px-4 py-3 font-semibold tracking-wider">Fecha</th>
+                    <th className="px-4 py-3 font-semibold tracking-wider">Club</th>
+                    <th className="px-4 py-3 font-semibold tracking-wider">Descripción</th>
+                    <th className="px-4 py-3 font-semibold tracking-wider">Tipo</th>
+                    <th className="px-4 py-3 font-semibold tracking-wider text-right">Monto</th>
+                    <th className="px-4 py-3 font-semibold tracking-wider"></th>
+                  </tr>
+                </thead>
+                <tbody className="divide-y divide-border">
+                  {txsLoading ? (
+                    Array.from({ length: 5 }).map((_, i) => (
+                      <tr key={i}><td colSpan={6} className="px-4 py-3"><div className="h-4 bg-border rounded animate-pulse" /></td></tr>
+                    ))
+                  ) : txs?.data?.map((tx: any) => (
+                    <tr key={tx.id} className="hover:bg-bg/40 transition-colors">
+                      <td className="px-4 py-3 text-text-secondary text-xs">{formatDate(tx.createdAt)}</td>
+                      <td className="px-4 py-3 font-medium text-text text-xs">{tx.clubName}</td>
+                      <td className="px-4 py-3 text-text-secondary text-xs">{tx.description}</td>
+                      <td className="px-4 py-3">
+                        <span className={`inline-flex items-center px-2 py-0.5 rounded border text-[9px] font-semibold uppercase tracking-wider ${
+                          tx.type === 'SUBSCRIPTION' ? 'bg-blue-50 text-blue-600 border-blue-200' : 'bg-purple-50 text-purple-600 border-purple-200'
+                        }`}>
+                          {tx.type === 'SUBSCRIPTION' ? 'Plan' : 'AddOn'}
+                        </span>
+                      </td>
+                      <td className="px-4 py-3 font-semibold text-text text-right text-xs">
+                        {formatCurrency(tx.amount)}
+                      </td>
+                      <td className="px-4 py-3 text-right">
+                        <Link to={`/clubs/${tx.clubId}`} className="text-xs font-semibold text-primary hover:underline">
+                          Ver Club
+                        </Link>
+                      </td>
+                    </tr>
+                  ))}
+                  {(!txs?.data || txs.data.length === 0) && !txsLoading && (
+                    <tr><td colSpan={6} className="px-4 py-12 text-center text-text-secondary">No hay transacciones recientes.</td></tr>
+                  )}
+                </tbody>
+              </table>
+            </div>
+            {(txs?.lastPage ?? 1) > 1 && (
+              <div className="px-4 py-3 border-t border-border flex items-center justify-between text-xs text-text-secondary">
+                <span>Mostrando {txs?.data.length} de {txs?.total} · Página {txs?.page} de {txs?.lastPage}</span>
+                <div className="flex gap-1.5">
+                  <button disabled={txs?.page === 1} onClick={() => setTxPage(p => p - 1)} className="flex items-center gap-1 px-2.5 py-1.5 rounded-lg border border-border hover:border-primary/40 disabled:opacity-40 disabled:cursor-not-allowed transition">
+                    <ChevronLeft size={13} /> Ant.
+                  </button>
+                  <button disabled={txs?.page === txs?.lastPage} onClick={() => setTxPage(p => p + 1)} className="flex items-center gap-1 px-2.5 py-1.5 rounded-lg border border-border hover:border-primary/40 disabled:opacity-40 disabled:cursor-not-allowed transition">
+                    Sig. <ChevronRight size={13} />
+                  </button>
+                </div>
+              </div>
+            )}
+          </div>
+        </div>
+      )}
 
     </div>
   );

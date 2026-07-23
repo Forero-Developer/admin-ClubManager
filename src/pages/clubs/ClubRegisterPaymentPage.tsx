@@ -26,6 +26,7 @@ const paymentSchema = z.object({
     addOnId: z.string(),
     quantity: z.number().min(1)
   })).optional(),
+  isGift: z.boolean().optional(),
 });
 
 type PaymentFormValues = z.infer<typeof paymentSchema>;
@@ -55,6 +56,7 @@ export function ClubRegisterPaymentPage() {
       periodYear: now.getFullYear(),
       reason: 'Pago manual registrado por admin',
       addOns: [],
+      isGift: false,
     }
   });
 
@@ -64,6 +66,22 @@ export function ClubRegisterPaymentPage() {
 
   const [hasAutoCalculated, setHasAutoCalculated] = useState(false);
   const [baseCapacity, setBaseCapacity] = useState(30);
+
+  // Derivar el intervalo actual del plan (para mostrar precios correctos de AddOns)
+  let currentInterval = 'MONTHLY';
+  if (plansData && club) {
+    if (selectedPriceId) {
+      for (const plan of plansData) {
+        const price = plan.pricing?.find((p: any) => p.id === selectedPriceId);
+        if (price) {
+          currentInterval = price.interval;
+          break;
+        }
+      }
+    } else if (club.subscriptionPrice) {
+      currentInterval = club.subscriptionPrice.interval;
+    }
+  }
 
   // Initialize newPriceId and amount when club loads
   useEffect(() => {
@@ -99,16 +117,42 @@ export function ClubRegisterPaymentPage() {
     if (!hasAutoCalculated) {
       const currentPlayers = club._count?.players || 0;
       
+      // 1. Inicializar con los addons que YA tiene activos el club y que NO son de pago único
+      let initialAddOns = (club.addOns || [])
+        .filter((a: any) => a.status === 'ACTIVE')
+        .filter((a: any) => {
+          const addOnDef = addOnsData.find((ad: any) => ad.id === (a.addOnId || a.addOn?.id));
+          const isOneTime = addOnDef?.pricing?.[0]?.interval === 'ONE_TIME';
+          return !isOneTime;
+        })
+        .map((a: any) => ({
+          addOnId: a.addOnId || a.addOn?.id,
+          quantity: a.quantity
+        }));
+      
+      // 2. Si excede la capacidad, asegurar que al menos tenga los paquetes de jugadores necesarios
       if (currentPlayers > capacity) {
         const extraPlayers = currentPlayers - capacity;
-        const requiredQuantity = Math.ceil(extraPlayers / 10); // Asumimos paquetes de 10
+        const requiredQuantity = Math.ceil(extraPlayers / 10);
         
-        // Buscar el addon de jugadores
         const playerPackAddOn = addOnsData.find((a: any) => a.code === 'player_pack_10') || addOnsData[0];
+        
         if (playerPackAddOn) {
-          setValue('addOns', [{ addOnId: playerPackAddOn.id, quantity: requiredQuantity }]);
+          const existingPackIndex = initialAddOns.findIndex((a: any) => a.addOnId === playerPackAddOn.id);
+          
+          if (existingPackIndex >= 0) {
+            // Actualizar cantidad si es menor a la requerida
+            if (initialAddOns[existingPackIndex].quantity < requiredQuantity) {
+              initialAddOns[existingPackIndex].quantity = requiredQuantity;
+            }
+          } else {
+            // Agregar el paquete si no lo tenía
+            initialAddOns.push({ addOnId: playerPackAddOn.id, quantity: requiredQuantity });
+          }
         }
       }
+      
+      setValue('addOns', initialAddOns);
       setHasAutoCalculated(true);
     }
   }, [addOnsData, plansData, club, setValue, hasAutoCalculated, selectedPriceId]);
@@ -154,9 +198,39 @@ export function ClubRegisterPaymentPage() {
 
       selectedAddOns.forEach(selectedAddOn => {
         const addon = addOnsData.find((a: any) => a.id === selectedAddOn.addOnId);
-        const activePrice = addon?.pricing?.[0]?.price || addon?.price || 0;
-        if (activePrice) {
-          const rawTotal = (Number(activePrice) || 0) * (selectedAddOn.quantity || 1) * intervalMultiplier;
+        if (!addon) return;
+
+        let activePrice = 0;
+        let finalMultiplier = 1;
+
+        const matchingPricing = addon.pricing?.find((p: any) => p.interval === currentInterval);
+        if (matchingPricing) {
+          activePrice = Number(matchingPricing.price);
+          // Si hace match exacto (ej. QUARTERLY), el precio ya es por el trimestre, no multiplicamos más.
+          finalMultiplier = 1; 
+        } else {
+          const monthlyPricing = addon.pricing?.find((p: any) => p.interval === 'MONTHLY');
+          if (monthlyPricing) {
+            activePrice = Number(monthlyPricing.price);
+            finalMultiplier = intervalMultiplier;
+          } else {
+            const firstPricing = addon.pricing?.[0];
+            if (firstPricing) {
+              activePrice = Number(firstPricing.price);
+              if (firstPricing.interval === 'ONE_TIME') {
+                finalMultiplier = 1;
+              } else {
+                finalMultiplier = intervalMultiplier;
+              }
+            } else {
+              activePrice = Number(addon.price || 0);
+              finalMultiplier = intervalMultiplier;
+            }
+          }
+        }
+
+        if (activePrice > 0) {
+          const rawTotal = activePrice * (selectedAddOn.quantity || 1) * finalMultiplier;
           totalAmount += rawTotal * discountFactor;
         }
       });
@@ -187,6 +261,7 @@ export function ClubRegisterPaymentPage() {
           reason: data.reason,
           paymentDate: combinedDateTime.toISOString(),
           addOns: data.addOns?.filter(a => a.addOnId && a.quantity > 0),
+          isGift: data.isGift,
         }
       },
       {
@@ -482,6 +557,31 @@ export function ClubRegisterPaymentPage() {
                         const isSelected = selectedAddOns.some(a => a.addOnId === addon.id);
                         const selectedQuantity = selectedAddOns.find(a => a.addOnId === addon.id)?.quantity || 1;
                         
+                        // Determinar el precio para mostrar
+                        let displayPrice = 0;
+                        const matchingPricing = addon.pricing?.find((p: any) => p.interval === currentInterval);
+                        if (matchingPricing) {
+                          displayPrice = Number(matchingPricing.price);
+                        } else {
+                          const monthlyPricing = addon.pricing?.find((p: any) => p.interval === 'MONTHLY');
+                          if (monthlyPricing) {
+                             displayPrice = Number(monthlyPricing.price);
+                             if (currentInterval === 'QUARTERLY') displayPrice *= 3;
+                             else if (currentInterval === 'SEMIANNUAL') displayPrice *= 6;
+                             else if (currentInterval === 'YEARLY') displayPrice *= 12;
+                          } else {
+                             const firstPricing = addon.pricing?.[0];
+                             if (firstPricing) {
+                               displayPrice = Number(firstPricing.price);
+                             } else {
+                               displayPrice = Number(addon.price || 0);
+                             }
+                          }
+                        }
+
+                        const isOneTime = addon.pricing?.some((p: any) => p.interval === 'ONE_TIME');
+                        const intervalLabel = isOneTime ? 'pago único' : 'periodo';
+
                         return (
                           <div key={addon.id} className={`flex items-center justify-between p-4 rounded-lg border transition-colors ${
                             isSelected ? 'bg-primary/5 border-primary/30' : 'bg-surface border-border'
@@ -496,13 +596,13 @@ export function ClubRegisterPaymentPage() {
                               <div>
                                 <span className="font-medium text-text">{addon.name}</span>
                                 <p className="text-xs text-text-secondary mt-0.5 flex items-center gap-1.5 flex-wrap">
-                                  {uiDiscountPercent > 0 ? (
+                                  {uiDiscountPercent > 0 && !isOneTime ? (
                                     <>
                                       <span className="line-through opacity-70">
-                                        {formatCurrency(addon?.pricing?.[0]?.price || addon.price || 0, addon.currency)}
+                                        {formatCurrency(displayPrice, addon.currency)}
                                       </span>
                                       <span className="font-bold text-success">
-                                        {formatCurrency((addon?.pricing?.[0]?.price || addon.price || 0) * uiDiscountFactor, addon.currency)} / mes c/u
+                                        {formatCurrency(displayPrice * uiDiscountFactor, addon.currency)} / {intervalLabel} c/u
                                       </span>
                                       <span className="inline-flex items-center rounded-full bg-success/10 px-2 py-0.5 text-[10px] font-medium text-success">
                                         {uiDiscountPercent}% dcto aplicado
@@ -510,7 +610,7 @@ export function ClubRegisterPaymentPage() {
                                     </>
                                   ) : (
                                     <span>
-                                      {formatCurrency(addon?.pricing?.[0]?.price || addon.price || 0, addon.currency)} / mes c/u
+                                      {formatCurrency(displayPrice, addon.currency)} / {intervalLabel} c/u
                                     </span>
                                   )}
                                 </p>
@@ -603,6 +703,20 @@ export function ClubRegisterPaymentPage() {
                 </div>
                 <p className="text-xs text-text-secondary mt-1.5">Este monto se calcula automáticamente, pero puedes ajustarlo si hubo descuentos o pagos parciales.</p>
                 {errors.amount && <span className="text-xs text-danger mt-1 block">{errors.amount.message}</span>}
+              </div>
+
+              <div className="pt-2">
+                <label className="flex items-center gap-2 cursor-pointer">
+                  <input
+                    type="checkbox"
+                    {...register('isGift')}
+                    className="w-4 h-4 text-primary bg-white border-border rounded focus:ring-primary focus:ring-2"
+                  />
+                  <span className="text-sm text-text font-medium">Es un obsequio / suscripción de cortesía</span>
+                </label>
+                <p className="text-[11px] text-text-secondary mt-1 pl-6">
+                  Si marcas esta opción, el monto cobrado será $0 en la auditoría y se activará el plan completo al club sin inflar tus ingresos.
+                </p>
               </div>
 
               <div>

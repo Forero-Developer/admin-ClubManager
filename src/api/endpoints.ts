@@ -12,6 +12,7 @@ export const ENDPOINTS = {
   clubs: {
     list: '/admin/clubs',
     byId: (id: string) => `/admin/clubs/${id}`,
+    planHistory: (id: string) => `/admin/clubs/${id}/plan-history`,
   },
   players: {
     list: (clubId: string) => `/admin/clubs/${clubId}/players`,
@@ -24,6 +25,7 @@ export const ENDPOINTS = {
     clubsWithPlans: '/admin/subscriptions/clubs-with-plans',
     payments: '/admin/subscriptions/payments',
     clubPayments: (clubId: string) => `/admin/subscriptions/clubs/${clubId}/payments`,
+    approveTransaction: (clubId: string, transactionId: string) => `/admin/subscriptions/clubs/${clubId}/transactions/${transactionId}/approve`,
     revertPayment: (clubId: string, paymentId: string) => `/admin/subscriptions/clubs/${clubId}/payments/${paymentId}/revert`,
     planHistory: (clubId: string) => `/admin/subscriptions/clubs/${clubId}/plan-history`,
     migratePlan: (clubId: string) => `/admin/subscriptions/clubs/${clubId}/migrate-plan`,
@@ -43,6 +45,7 @@ export const ENDPOINTS = {
       features: '/admin/subscriptions/features',
     },
     analytics: '/admin/subscriptions/analytics',
+    transactions: '/admin/subscriptions/transactions',
     addons: {
       list: '/admin/subscriptions/addons',
       create: '/admin/subscriptions/addons',

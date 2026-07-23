@@ -11,4 +11,7 @@ export const clubsService = {
     
   delete: (id: string) =>
     apiClient.delete<any, { message: string }>(ENDPOINTS.clubs.byId(id)),
+
+  getPlanHistory: (id: string) =>
+    apiClient.get<any, any[]>(ENDPOINTS.clubs.planHistory(id)),
 };

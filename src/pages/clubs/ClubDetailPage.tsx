@@ -1,13 +1,14 @@
 import { useState } from 'react';
 import { useParams, useNavigate } from 'react-router-dom';
-import { useClubDetail } from './hooks/useClubs';
+import { useClubDetail, useClubPlanHistory } from './hooks/useClubs';
 import { 
   ArrowLeft, Building2, MapPin, Users, Phone, Mail, Calendar, CreditCard,
   CheckCircle2, Clock, AlertTriangle, XCircle, Package, History,
-  Layers, ShieldAlert } from 'lucide-react'
+  Layers, ShieldAlert, MessageCircle, Copy } from 'lucide-react'
 
 import { ClubPlayersTab } from './components/ClubPlayersTab';
 import { ClubBillingTab } from './components/ClubBillingTab';
+import { AssignAddOnModal } from './components/AssignAddOnModal';
 import { format } from 'date-fns';
 import { es } from 'date-fns/locale';
 
@@ -24,7 +25,9 @@ export function ClubDetailPage() {
   const { id } = useParams<{ id: string }>();
   const navigate = useNavigate();
   const { data: club, isLoading, isError } = useClubDetail(id || '');
+  const { data: planHistory } = useClubPlanHistory(id || '');
   const [activeTab, setActiveTab] = useState<TabKey>('billing');
+  const [isAssignAddOnOpen, setIsAssignAddOnOpen] = useState(false);
 
   const formatDate = (dateString?: string | null) => {
     if (!dateString) return 'N/A';
@@ -60,7 +63,7 @@ export function ClubDetailPage() {
     { key: 'billing', label: 'Suscripción y Facturación', icon: <CreditCard size={15} /> },
     { key: 'addons', label: 'Add-Ons', icon: <Package size={15} />, count: club.addOns?.length ?? 0 },
     { key: 'players', label: 'Jugadores', icon: <Users size={15} />, count: club._count?.players ?? 0 },
-    { key: 'history', label: 'Historial de Planes', icon: <History size={15} />, count: club.planHistory?.length ?? 0 },
+    { key: 'history', label: 'Historial de Planes', icon: <History size={15} />, count: planHistory?.length ?? 0 },
   ];
 
   return (
@@ -140,29 +143,47 @@ export function ClubDetailPage() {
                 {club.users && club.users.length > 0 && (
                   <div>
                     <p className="text-[10px] text-text-secondary uppercase tracking-widest font-bold mb-1.5">Cuenta Admin</p>
-                    <a href={`mailto:${club.users[0].email}`} className="flex items-center gap-2 text-sm text-text hover:text-primary transition-colors font-medium">
-                      <div className="p-1.5 bg-blue-50 border border-blue-100 text-blue-600 rounded-md">
-                        <Mail size={14} /> 
-                      </div>
-                      {club.users[0].email}
+                    <div className="flex items-center gap-2">
+                      <a href={`mailto:${club.users[0].email}`} className="flex items-center gap-2 text-sm text-text hover:text-primary transition-colors font-medium">
+                        <div className="p-1.5 bg-blue-50 border border-blue-100 text-blue-600 rounded-md">
+                          <Mail size={14} /> 
+                        </div>
+                        {club.users[0].email}
+                      </a>
+                      <button 
+                        onClick={() => navigator.clipboard.writeText(club.users[0].email)}
+                        className="text-text-secondary hover:text-primary transition-colors p-1"
+                        title="Copiar email"
+                      >
+                        <Copy size={13} />
+                      </button>
                       {club.users[0].googleId && (
-                        <span className="bg-blue-100 border border-blue-200 text-blue-700 text-[10px] px-2 py-0.5 rounded-full font-bold uppercase tracking-wider">
+                        <span className="bg-blue-100 border border-blue-200 text-blue-700 text-[10px] px-2 py-0.5 rounded-full font-bold uppercase tracking-wider ml-1">
                           Google
                         </span>
                       )}
-                    </a>
+                    </div>
                   </div>
                 )}
                 
                 {club.email && (
                   <div>
                     <p className="text-[10px] text-text-secondary uppercase tracking-widest font-bold mb-1.5">Email Contacto</p>
-                    <a href={`mailto:${club.email}`} className="flex items-center gap-2 text-sm text-text hover:text-primary transition-colors font-medium">
-                      <div className="p-1.5 bg-gray-50 border border-border text-gray-600 rounded-md">
-                        <Mail size={14} /> 
-                      </div>
-                      {club.email}
-                    </a>
+                    <div className="flex items-center gap-2">
+                      <a href={`mailto:${club.email}`} className="flex items-center gap-2 text-sm text-text hover:text-primary transition-colors font-medium">
+                        <div className="p-1.5 bg-gray-50 border border-border text-gray-600 rounded-md">
+                          <Mail size={14} /> 
+                        </div>
+                        {club.email}
+                      </a>
+                      <button 
+                        onClick={() => navigator.clipboard.writeText(club.email)}
+                        className="text-text-secondary hover:text-primary transition-colors p-1"
+                        title="Copiar email"
+                      >
+                        <Copy size={13} />
+                      </button>
+                    </div>
                   </div>
                 )}
 
@@ -179,7 +200,7 @@ export function ClubDetailPage() {
                 )}
               </div>
 
-              <div className="grid grid-cols-2 sm:grid-cols-4 gap-4 pt-4 border-t border-border">
+              <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-5 gap-4 pt-4 border-t border-border">
                 <div className="bg-bg/60 rounded-lg p-3">
                   <p className="text-[10px] text-text-secondary uppercase tracking-wide mb-1">Plan Actual</p>
                   <p className="font-semibold text-text text-sm">{club.subscriptionPrice?.plan.name ?? 'Sin plan'}</p>
@@ -201,6 +222,13 @@ export function ClubDetailPage() {
                 <div className="bg-bg/60 rounded-lg p-3">
                   <p className="text-[10px] text-text-secondary uppercase tracking-wide mb-1">Método</p>
                   <p className="font-semibold text-text text-sm">{club.billingMethod ?? '—'}</p>
+                </div>
+                <div className="bg-bg/60 rounded-lg p-3">
+                  <p className="text-[10px] text-text-secondary uppercase tracking-wide mb-1 flex items-center gap-1"><MessageCircle size={10} /> WhatsApp</p>
+                  <p className="font-semibold text-text text-sm">{club.whatsappMonthlyLimit ?? 0} / mes</p>
+                  <p className="text-[10px] text-text-secondary">
+                    Billetera: <span className="font-semibold">{club.wallets?.[0]?.balance ?? 0}</span>
+                  </p>
                 </div>
               </div>
             </div>
@@ -241,6 +269,23 @@ export function ClubDetailPage() {
           {/* Tab: AddOns */}
           {activeTab === 'addons' && (
             <div>
+              {(() => {
+                const addonPayments = club.addOns?.flatMap(a => 
+                  (a.payments || []).map((p: any) => ({ ...p, addonName: a.addOn.name, addonCode: a.addOn.code }))
+                ).sort((a: any, b: any) => new Date(b.periodStart).getTime() - new Date(a.periodStart).getTime()) || [];
+
+                return (
+                  <>
+              <div className="flex justify-between items-center mb-6">
+                <h3 className="text-sm font-semibold text-text">AddOns Activos</h3>
+                <button
+                  onClick={() => setIsAssignAddOnOpen(true)}
+                  className="px-3 py-1.5 text-xs font-semibold bg-primary text-white rounded-lg hover:bg-primary-dark transition shadow-sm"
+                >
+                  Asignar Manualmente
+                </button>
+              </div>
+
               {!club.addOns || club.addOns.length === 0 ? (
                 <div className="text-center py-12">
                   <Package size={36} className="mx-auto text-text-secondary/30 mb-3" />
@@ -270,36 +315,80 @@ export function ClubDetailPage() {
                   ))}
                 </div>
               )}
+                <div className="mt-8">
+                  <h4 className="text-sm font-semibold text-text mb-4">Historial de Compras</h4>
+                  {addonPayments.length === 0 ? (
+                    <p className="text-xs text-text-secondary">No hay compras registradas.</p>
+                  ) : (
+                    <div className="bg-white border border-border rounded-xl overflow-hidden shadow-sm">
+                      <table className="w-full text-xs text-left">
+                        <thead className="bg-bg/50 border-b border-border text-text-secondary uppercase">
+                          <tr>
+                            <th className="px-4 py-2 font-semibold tracking-wider">Fecha</th>
+                            <th className="px-4 py-2 font-semibold tracking-wider">AddOn</th>
+                            <th className="px-4 py-2 font-semibold tracking-wider">Monto</th>
+                            <th className="px-4 py-2 font-semibold tracking-wider">Notas</th>
+                          </tr>
+                        </thead>
+                        <tbody className="divide-y divide-border">
+                          {addonPayments.map((payment: any) => (
+                            <tr key={payment.id} className="hover:bg-bg/40">
+                              <td className="px-4 py-2 text-text-secondary">{formatDate(payment.periodStart)}</td>
+                              <td className="px-4 py-2 font-medium text-text">{payment.addonName}</td>
+                              <td className="px-4 py-2 font-semibold text-text">{formatCurrency(payment.amount)}</td>
+                              <td className="px-4 py-2 text-text-secondary truncate max-w-[200px]" title={payment.notes}>{payment.notes || '—'}</td>
+                            </tr>
+                          ))}
+                        </tbody>
+                      </table>
+                    </div>
+                  )}
+                </div>
+                  </>
+                );
+              })()}
             </div>
           )}
 
           {/* Tab: History */}
           {activeTab === 'history' && (
             <div className="space-y-4">
-              {!club.planHistory || club.planHistory.length === 0 ? (
+              {!planHistory || planHistory.length === 0 ? (
                 <div className="text-center py-12">
                   <History size={36} className="mx-auto text-text-secondary/30 mb-3" />
                   <p className="text-text-secondary text-sm">No hay un historial de planes registrado.</p>
                 </div>
               ) : (
                 <div className="space-y-4 relative before:absolute before:inset-0 before:ml-5 before:-translate-x-px md:before:mx-auto md:before:translate-x-0 before:h-full before:w-0.5 before:bg-gradient-to-b before:from-transparent before:via-border before:to-transparent">
-                  {club.planHistory.map((hist) => (
-                    <div key={hist.id} className="relative flex items-center justify-between md:justify-normal md:odd:flex-row-reverse group is-active">
-                      <div className="flex items-center justify-center w-10 h-10 rounded-full border-4 border-white bg-blue-100 text-blue-600 shadow shrink-0 md:order-1 md:group-odd:-translate-x-1/2 md:group-even:translate-x-1/2">
-                        <History size={16} />
-                      </div>
-                      <div className="w-[calc(100%-4rem)] md:w-[calc(50%-2.5rem)] p-4 rounded-xl border border-border bg-white shadow-sm">
-                        <div className="flex items-center justify-between mb-1">
-                          <span className="font-bold text-text">{hist.toPrice.plan.name}</span>
-                          <span className="text-[10px] text-text-secondary">{formatDate(hist.changedAt)}</span>
+                  {planHistory.map((hist: any) => {
+                    // Si hubo un pago asociado a este cambio de historial, mostramos el total pagado (Plan + Addons)
+                    const paidAmount = hist.saasPayments?.[0]?.amount;
+                    const paymentNotes = hist.saasPayments?.[0]?.notes;
+                    const displayAmount = paidAmount !== undefined ? paidAmount : hist.toPrice?.price;
+                    const displayCurrency = hist.toPrice?.currency || 'COP';
+
+                    return (
+                      <div key={hist.id} className="relative flex items-center justify-between md:justify-normal md:odd:flex-row-reverse group is-active">
+                        <div className="flex items-center justify-center w-10 h-10 rounded-full border-4 border-white bg-blue-100 text-blue-600 shadow shrink-0 md:order-1 md:group-odd:-translate-x-1/2 md:group-even:translate-x-1/2">
+                          <History size={16} />
                         </div>
-                        <div className="text-xs text-text-secondary space-y-1">
-                          <p>Precio: <span className="font-medium text-text">{formatCurrency(hist.toPrice.price, hist.toPrice.currency)}</span></p>
-                          {hist.reason && <p className="italic">"{hist.reason}"</p>}
+                        <div className="w-[calc(100%-4rem)] md:w-[calc(50%-2.5rem)] p-4 rounded-xl border border-border bg-white shadow-sm">
+                          <div className="flex items-center justify-between mb-1">
+                            <span className="font-bold text-text">{hist.toPrice?.plan?.name || 'Plan Desconocido'}</span>
+                            <span className="text-[10px] text-text-secondary">{formatDate(hist.changedAt)}</span>
+                          </div>
+                          <div className="text-xs text-text-secondary space-y-1">
+                            <p>
+                              Monto Total: <span className="font-medium text-text">{formatCurrency(displayAmount, displayCurrency)}</span>
+                              {paidAmount !== undefined && <span className="text-[10px] ml-1 text-primary/70">(Incluye Add-Ons)</span>}
+                            </p>
+                            {paymentNotes && <p className="italic">Detalle: "{paymentNotes}"</p>}
+                            {!paymentNotes && hist.reason && <p className="italic">Razón: "{hist.reason}"</p>}
+                          </div>
                         </div>
                       </div>
-                    </div>
-                  ))}
+                    );
+                  })}
                 </div>
               )}
             </div>
@@ -311,6 +400,15 @@ export function ClubDetailPage() {
           )}
         </div>
       </div>
+
+      {/* Modals */}
+      {club && (
+        <AssignAddOnModal
+          isOpen={isAssignAddOnOpen}
+          onClose={() => setIsAssignAddOnOpen(false)}
+          clubId={club.id}
+        />
+      )}
     </div>
   );
 }

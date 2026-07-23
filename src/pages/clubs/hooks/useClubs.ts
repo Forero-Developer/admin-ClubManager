@@ -16,3 +16,11 @@ export function useClubDetail(id: string) {
     enabled: !!id,
   });
 }
+
+export function useClubPlanHistory(id: string) {
+  return useQuery({
+    queryKey: ['clubs', id, 'plan-history'],
+    queryFn: () => clubsService.getPlanHistory(id),
+    enabled: !!id,
+  });
+}

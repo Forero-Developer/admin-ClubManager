@@ -54,6 +54,13 @@ export function useAnalytics() {
   });
 }
 
+export function useTransactions(params: { page: number; limit: number; search?: string }) {
+  return useQuery({
+    queryKey: ['subscriptions', 'transactions', params],
+    queryFn: () => subscriptionsService.getTransactions(params),
+  });
+}
+
 export function useClubPayments(clubId: string) {
   return useQuery({
     queryKey: ['clubPayments', clubId],
@@ -134,6 +141,12 @@ export function useSubscriptionActions() {
     onSuccess: invalidateSubscriptions,
   });
 
+  const approveTransaction = useMutation({
+    mutationFn: ({ clubId, transactionId }: { clubId: string; transactionId: string }) =>
+      subscriptionsService.approveTransaction(clubId, transactionId),
+    onSuccess: invalidateSubscriptions,
+  });
+
   return {
     migratePlan,
     assignTrial,
@@ -146,5 +159,6 @@ export function useSubscriptionActions() {
     resolveDebts,
     assignManualAddOn,
     revertPayment,
+    approveTransaction,
   };
 }

@@ -154,6 +154,7 @@ export interface RegisterPaymentDto {
   notes?: string;
   reason?: string;
   paymentDate?: string;
+  isGift?: boolean;
 }
 
 export interface ResolveDebtsDto {
@@ -164,6 +165,7 @@ export interface AssignAddOnDto {
   addOnId: string;
   quantity: number;
   notes?: string;
+  isGift?: boolean;
 }
 
 export interface AddOnOption {
@@ -203,4 +205,19 @@ export interface SubscriptionAnalytics {
   byStatus: Record<string, number>;
   tierBreakdown: AnalyticsTierEntry[];
   monthlyRevenue: MonthlyRevenueEntry[];
+  addonMetrics: {
+    performance: Array<{
+      id: string;
+      name: string;
+      code: string;
+      revenue: number;
+      count: number;
+    }>;
+    topClubs: Array<{
+      clubId: string;
+      clubName: string;
+      revenue: number;
+      count: number;
+    }>;
+  };
 }

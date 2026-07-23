@@ -42,6 +42,9 @@ export const subscriptionsService = {
   getClubPayments: (clubId: string, params?: PaymentFilterQuery) => 
     apiClient.get<any, PaginatedResult<PaymentListItem>>(ENDPOINTS.subscriptions.clubPayments(clubId), { params }),
     
+  approveTransaction: (clubId: string, transactionId: string) =>
+    apiClient.post<any, { success: boolean; message: string }>(ENDPOINTS.subscriptions.approveTransaction(clubId, transactionId)),
+
   revertPayment: (clubId: string, paymentId: string) =>
     apiClient.post<any, { success: boolean; message: string }>(ENDPOINTS.subscriptions.revertPayment(clubId, paymentId)),
     
@@ -80,6 +83,9 @@ export const subscriptionsService = {
 
   getAnalytics: () =>
     apiClient.get<any, SubscriptionAnalytics>(ENDPOINTS.subscriptions.analytics),
+
+  getTransactions: (params?: { page?: number; limit?: number; search?: string }) =>
+    apiClient.get<any, any>(ENDPOINTS.subscriptions.transactions, { params }),
 
   createAddOn: (data: any) =>
     apiClient.post<any, any>(ENDPOINTS.subscriptions.addons.create, data),
