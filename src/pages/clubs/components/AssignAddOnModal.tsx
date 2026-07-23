@@ -80,7 +80,7 @@ export function AssignAddOnModal({ isOpen, onClose, clubId }: AssignAddOnModalPr
                 <option value="">Selecciona un AddOn...</option>
                 {addOns?.map((addon) => (
                   <option key={addon.id} value={addon.id}>
-                    {addon.name} - {new Intl.NumberFormat('es-CO', { style: 'currency', currency: addon.currency }).format(addon.price)}
+                    {addon.name} - {new Intl.NumberFormat('es-CO', { style: 'currency', currency: addon.currency }).format(addon.price || 0)}
                   </option>
                 ))}
               </select>

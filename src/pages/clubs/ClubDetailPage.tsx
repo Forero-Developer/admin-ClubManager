@@ -177,7 +177,7 @@ export function ClubDetailPage() {
                         {club.email}
                       </a>
                       <button 
-                        onClick={() => navigator.clipboard.writeText(club.email)}
+                        onClick={() => navigator.clipboard.writeText(club.email!)}
                         className="text-text-secondary hover:text-primary transition-colors p-1"
                         title="Copiar email"
                       >
@@ -225,9 +225,9 @@ export function ClubDetailPage() {
                 </div>
                 <div className="bg-bg/60 rounded-lg p-3">
                   <p className="text-[10px] text-text-secondary uppercase tracking-wide mb-1 flex items-center gap-1"><MessageCircle size={10} /> WhatsApp</p>
-                  <p className="font-semibold text-text text-sm">{club.whatsappMonthlyLimit ?? 0} / mes</p>
+                  <p className="font-semibold text-text text-sm">{(club as any).whatsappMonthlyLimit ?? 0} / mes</p>
                   <p className="text-[10px] text-text-secondary">
-                    Billetera: <span className="font-semibold">{club.wallets?.[0]?.balance ?? 0}</span>
+                    Billetera: <span className="font-semibold">{(club as any).wallets?.[0]?.balance ?? 0}</span>
                   </p>
                 </div>
               </div>
@@ -271,7 +271,7 @@ export function ClubDetailPage() {
             <div>
               {(() => {
                 const addonPayments = club.addOns?.flatMap(a => 
-                  (a.payments || []).map((p: any) => ({ ...p, addonName: a.addOn.name, addonCode: a.addOn.code }))
+                  ((a as any).payments || []).map((p: any) => ({ ...p, addonName: a.addOn.name, addonCode: a.addOn.code }))
                 ).sort((a: any, b: any) => new Date(b.periodStart).getTime() - new Date(a.periodStart).getTime()) || [];
 
                 return (

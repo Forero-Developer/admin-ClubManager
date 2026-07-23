@@ -2,7 +2,7 @@ import { useState } from 'react';
 import { useSubscriptionStats, useSubscriptions, useAnalytics, useTransactions } from './hooks/useSubscriptions';
 import {
   Plus, TrendingUp, CreditCard,
-  CheckCircle2, AlertTriangle, DollarSign,
+  AlertTriangle,
   CalendarDays, BarChart3, Building2, Search, X, ChevronLeft, ChevronRight,
   Banknote, Wallet, Link2, ReceiptText, Package, Clock,
 } from 'lucide-react';
@@ -237,8 +237,6 @@ export function SubscriptionsPage() {
   const setAddonCountFilter = (c: number | undefined) => setFilters(f => ({ ...f, addonCount: c, page: 1 }));
   const applySearch = () => { setFilters(f => ({ ...f, search: searchInput || undefined, page: 1 })); setPage(1); };
 
-  const active    = stats?.byStatus?.ACTIVE    ?? 0;
-  const trial     = stats?.byStatus?.TRIAL     ?? 0;
   const pastDue   = stats?.byStatus?.PAST_DUE  ?? 0;
   const suspended = stats?.byStatus?.SUSPENDED ?? 0;
 
@@ -293,8 +291,8 @@ export function SubscriptionsPage() {
             </div>
         ) : (
           <div className="grid grid-cols-2 lg:grid-cols-4 gap-4">
-            <MiniStat label="Suscripciones y Jugadores" value={formatCurrency((analytics?.baseRevenue ?? 0) + (analytics?.recurringAddonRevenue ?? 0))} sub="Ingresos recurrentes" icon={<TrendingUp size={20} className="text-blue-500" />} accent="border-blue-200" />
-            <MiniStat label="Mensajes de WSP (Pagos Únicos)" value={formatCurrency(analytics?.oneTimeAddonRevenue ?? 0)} sub="Paquetes de mensajes" icon={<Package size={20} className="text-purple-500" />} accent="border-purple-200" />
+            <MiniStat label="Suscripciones y Jugadores" value={formatCurrency((analytics?.baseRevenue ?? 0) + ((analytics as any)?.recurringAddonRevenue ?? 0))} sub="Ingresos recurrentes" icon={<TrendingUp size={20} className="text-blue-500" />} accent="border-blue-200" />
+            <MiniStat label="Mensajes de WSP (Pagos Únicos)" value={formatCurrency((analytics as any)?.oneTimeAddonRevenue ?? 0)} sub="Paquetes de mensajes" icon={<Package size={20} className="text-purple-500" />} accent="border-purple-200" />
             <MiniStat label="Ticket Promedio"       value={formatCurrency(
               (analytics?.tierBreakdown?.reduce((acc: any, t: any) => acc + t.totalRevenue, 0) ?? 0) / 
               (analytics?.tierBreakdown?.reduce((acc: any, t: any) => acc + t.clubCount, 0) || 1)
