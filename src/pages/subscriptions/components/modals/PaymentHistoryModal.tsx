@@ -22,8 +22,9 @@ export function PaymentHistoryModal({ club, onClose }: Props) {
   const payments = data?.data || [];
   
   const handleRevert = (paymentId: string) => {
-    if (confirm('¿Estás seguro de revertir este pago? Esto lo marcará como fallido y retrocederá las fechas de cobro del club al periodo anterior.')) {
-      revertPayment.mutate({ clubId: club.id, paymentId }, {
+    const reason = prompt('¿Motivo para revertir este pago? Esto lo marcará como fallido y retrocederá las fechas de cobro del club al periodo anterior.');
+    if (reason !== null) {
+      revertPayment.mutate({ clubId: club.id, paymentId, reason }, {
         onSuccess: () => toast.success('Pago revertido con éxito.'),
         onError: () => toast.error('Error al revertir el pago.')
       });
@@ -34,6 +35,7 @@ export function PaymentHistoryModal({ club, onClose }: Props) {
     switch (status) {
       case 'SUCCESS': return <CheckCircle2 size={16} className="text-success" />;
       case 'FAILED': return <XCircle size={16} className="text-danger" />;
+      case 'REVERTED': return <XCircle size={16} className="text-slate-500" />;
       default: return <Loader2 size={16} className="text-amber-500" />;
     }
   };
@@ -42,7 +44,8 @@ export function PaymentHistoryModal({ club, onClose }: Props) {
     switch (status) {
       case 'SUCCESS': return 'bg-success/10 text-success border-success/20';
       case 'FAILED': return 'bg-danger/10 text-danger border-danger/20';
-      default: return 'bg-amber-100 text-amber-700 border-amber-200';
+      case 'REVERTED': return 'bg-slate-100 text-slate-600 border-slate-200';
+      default: return 'bg-amber-500/10 text-amber-600 border-amber-500/20';
     }
   };
 

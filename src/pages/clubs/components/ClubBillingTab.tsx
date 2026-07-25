@@ -1,5 +1,5 @@
 import { useState } from 'react';
-import { CreditCard, Calendar, Gift, Settings, ArrowRightLeft, CheckCircle2, History, XCircle, AlertTriangle, Clock, Check } from 'lucide-react';
+import { CreditCard, Calendar, Gift, Settings, ArrowRightLeft, CheckCircle2, History, XCircle, AlertTriangle, Clock, Check, Undo, PlayCircle } from 'lucide-react';
 import { format } from 'date-fns';
 import { es } from 'date-fns/locale';
 import { useClubPayments, useSubscriptionActions } from '../../subscriptions/hooks/useSubscriptions';
@@ -14,7 +14,7 @@ interface ClubBillingTabProps {
 export function ClubBillingTab({ club }: ClubBillingTabProps) {
   const [activeModal, setActiveModal] = useState<'payment' | 'extend' | 'addons' | null>(null);
   const { data: payments, isLoading: paymentsLoading } = useClubPayments(club.id);
-  const { cancelSubscription, approveTransaction } = useSubscriptionActions();
+  const { cancelSubscription, approveTransaction, revertPayment, assignTrial } = useSubscriptionActions();
 
   const formatCurrency = (amount?: number | null, currency = 'COP') => {
     if (!amount && amount !== 0) return 'N/A';
@@ -28,7 +28,7 @@ export function ClubBillingTab({ club }: ClubBillingTabProps) {
 
   const handleCancelMP = () => {
     if (confirm('¿Estás seguro de cancelar la suscripción automática en Mercado Pago? El club pasará a pago manual.')) {
-      cancelSubscription.mutate(club.id);
+      cancelSubscription.mutate({ clubId: club.id });
     }
   };
 
@@ -133,6 +133,27 @@ export function ClubBillingTab({ club }: ClubBillingTabProps) {
               </p>
             </button>
 
+            {/* Acción 4: Asignar Trial Nuevo */}
+            <button 
+              onClick={() => {
+                const daysStr = prompt('¿Cuántos días de Trial deseas asignar?', '30');
+                if (daysStr) {
+                  const days = parseInt(daysStr, 10);
+                  if (!isNaN(days) && days > 0) {
+                    assignTrial.mutate({ clubId: club.id, data: { days, reason: 'Asignado manualmente por admin' } });
+                  }
+                }
+              }}
+              disabled={assignTrial.isPending}
+              className="flex flex-col items-start p-4 bg-white rounded-xl border border-border shadow-sm hover:shadow-md hover:border-amber-500/50 transition-all text-left group"
+            >
+              <div className="p-2 bg-amber-50 text-amber-600 rounded-lg mb-3 group-hover:scale-110 transition-transform">
+                <PlayCircle size={20} />
+              </div>
+              <h4 className="font-bold text-text text-sm mb-1">Asignar Trial</h4>
+              <p className="text-xs text-text-secondary">Reactiva el club otorgándole días gratuitos.</p>
+            </button>
+
             {/* Acción 4: Cancelar MP */}
             {club.mpSubscriptionId && club.mpStatus !== 'cancelled' ? (
               <button 
@@ -142,8 +163,8 @@ export function ClubBillingTab({ club }: ClubBillingTabProps) {
                 <div className="p-2 bg-red-50 text-red-600 rounded-lg mb-3 group-hover:scale-110 transition-transform">
                   <XCircle size={20} />
                 </div>
-                <h4 className="font-bold text-danger text-sm mb-1">Cancelar MercadoPago</h4>
-                <p className="text-xs text-text-secondary">Desactivar débito automático para pasar a manual.</p>
+                <h4 className="font-bold text-danger text-sm mb-1">Cortar Débito Automático</h4>
+                <p className="text-xs text-text-secondary">Cancela la recurrencia en MP. El club seguirá activo hasta su fecha de corte.</p>
               </button>
             ) : (
               <div className="flex flex-col items-start p-4 bg-gray-50 rounded-xl border border-border opacity-70 text-left">
@@ -230,18 +251,50 @@ export function ClubBillingTab({ club }: ClubBillingTabProps) {
                           <Check size={14} />
                         </button>
                       )}
+                      {payment.status === 'SUCCESS' && (
+                        <button
+                          onClick={() => {
+                            const reason = prompt('¿Motivo para revertir este pago?');
+                            if (reason !== null) {
+                              revertPayment.mutate({ clubId: club.id, paymentId: payment.id, reason });
+                            }
+                          }}
+                          disabled={revertPayment.isPending}
+                          className="flex items-center justify-center p-1 bg-red-50 text-red-600 hover:bg-red-100 hover:text-red-700 rounded-md transition-colors"
+                          title="Revertir pago"
+                        >
+                          <Undo size={14} />
+                        </button>
+                      )}
                     </div>
                   )}
-                  {!payment.notes && payment.status === 'PENDING' && (
-                    <div className="flex justify-end mt-1">
-                      <button
-                        onClick={() => approveTransaction.mutate({ clubId: club.id, transactionId: payment.id })}
-                        disabled={approveTransaction.isPending}
-                        className="flex items-center justify-center p-1 bg-green-50 text-green-600 hover:bg-green-100 hover:text-green-700 rounded-md transition-colors"
-                        title="Aprobar pago manualmente"
-                      >
-                        <Check size={14} />
-                      </button>
+                  {!payment.notes && (
+                    <div className="flex justify-end mt-1 gap-2">
+                      {payment.status === 'PENDING' && (
+                        <button
+                          onClick={() => approveTransaction.mutate({ clubId: club.id, transactionId: payment.id })}
+                          disabled={approveTransaction.isPending}
+                          className="flex items-center justify-center p-1 bg-green-50 text-green-600 hover:bg-green-100 hover:text-green-700 rounded-md transition-colors"
+                          title="Aprobar pago manualmente"
+                        >
+                          <Check size={14} />
+                        </button>
+                      )}
+                      {payment.status === 'SUCCESS' && (
+                        <button
+                          onClick={() => {
+                            const reason = prompt('¿Motivo para revertir este pago?');
+                            if (reason !== null) {
+                              revertPayment.mutate({ clubId: club.id, paymentId: payment.id, reason });
+                            }
+                          }}
+                          disabled={revertPayment.isPending}
+                          className="flex items-center justify-center p-1 bg-red-50 text-red-600 hover:bg-red-100 hover:text-red-700 rounded-md transition-colors"
+                          title="Revertir pago"
+                        >
+                          <Undo size={14} />
+                        </button>
+                      )}
                     </div>
                   )}
                 </div>

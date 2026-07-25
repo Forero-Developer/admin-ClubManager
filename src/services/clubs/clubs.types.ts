@@ -8,6 +8,7 @@ export interface ClubListQuery {
   minPlayers?: number;
   maxPlayers?: number;
   orderByPlayers?: 'asc' | 'desc';
+  mpStatus?: string;
 }
 
 export interface PaginatedResult<T> {

@@ -14,4 +14,13 @@ export const clubsService = {
 
   getPlanHistory: (id: string) =>
     apiClient.get<any, any[]>(ENDPOINTS.clubs.planHistory(id)),
+    
+  releaseAccess: (id: string) =>
+    apiClient.post<any, { message: string }>(ENDPOINTS.clubs.releaseAccess(id), {}),
+    
+  cancelAndRevert: (id: string) =>
+    apiClient.post<any, { message: string }>(ENDPOINTS.clubs.cancelAndRevert(id), {}),
+    
+  cancelRecurring: (id: string) =>
+    apiClient.post<any, { message: string }>(ENDPOINTS.clubs.cancelRecurring(id), {}),
 };

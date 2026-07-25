@@ -136,8 +136,8 @@ export function useSubscriptionActions() {
   });
 
   const revertPayment = useMutation({
-    mutationFn: ({ clubId, paymentId }: { clubId: string; paymentId: string }) =>
-      subscriptionsService.revertPayment(clubId, paymentId),
+    mutationFn: ({ clubId, paymentId, reason }: { clubId: string; paymentId: string; reason?: string }) => 
+      subscriptionsService.revertPayment(clubId, paymentId, reason),
     onSuccess: invalidateSubscriptions,
   });
 

@@ -45,8 +45,8 @@ export const subscriptionsService = {
   approveTransaction: (clubId: string, transactionId: string) =>
     apiClient.post<any, { success: boolean; message: string }>(ENDPOINTS.subscriptions.approveTransaction(clubId, transactionId)),
 
-  revertPayment: (clubId: string, paymentId: string) =>
-    apiClient.post<any, { success: boolean; message: string }>(ENDPOINTS.subscriptions.revertPayment(clubId, paymentId)),
+  revertPayment: (clubId: string, paymentId: string, reason?: string) =>
+    apiClient.post<any, { success: boolean; message: string }>(ENDPOINTS.subscriptions.revertPayment(clubId, paymentId), { reason }),
     
   getPlanHistory: (clubId: string) => 
     apiClient.get<any, any[]>(ENDPOINTS.subscriptions.planHistory(clubId)),

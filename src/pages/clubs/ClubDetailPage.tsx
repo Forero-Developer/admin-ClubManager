@@ -1,10 +1,10 @@
 import { useState } from 'react';
 import { useParams, useNavigate } from 'react-router-dom';
-import { useClubDetail, useClubPlanHistory } from './hooks/useClubs';
+import { useClubDetail, useClubPlanHistory, useReleaseAccess, useCancelAndRevert, useCancelRecurring } from './hooks/useClubs';
 import { 
   ArrowLeft, Building2, MapPin, Users, Phone, Mail, Calendar, CreditCard,
   CheckCircle2, Clock, AlertTriangle, XCircle, Package, History,
-  Layers, ShieldAlert, MessageCircle, Copy } from 'lucide-react'
+  Layers, ShieldAlert, MessageCircle, Copy, PlayCircle, Trash2 } from 'lucide-react'
 
 import { ClubPlayersTab } from './components/ClubPlayersTab';
 import { ClubBillingTab } from './components/ClubBillingTab';
@@ -28,6 +28,28 @@ export function ClubDetailPage() {
   const { data: planHistory } = useClubPlanHistory(id || '');
   const [activeTab, setActiveTab] = useState<TabKey>('billing');
   const [isAssignAddOnOpen, setIsAssignAddOnOpen] = useState(false);
+
+  const releaseMutation = useReleaseAccess();
+  const cancelAndRevertMutation = useCancelAndRevert();
+  const cancelRecurringMutation = useCancelRecurring();
+
+  const handleReleaseAccess = () => {
+    if (window.confirm('¿Estás seguro de forzar la liberación de acceso de este club?')) {
+      releaseMutation.mutate(id!);
+    }
+  };
+
+  const handleCancelAndRevert = () => {
+    if (window.confirm('¿Estás seguro de cancelar la suscripción y revertir el club a SUSPENDED? Esta acción no se puede deshacer.')) {
+      cancelAndRevertMutation.mutate(id!);
+    }
+  };
+
+  const handleCancelRecurring = () => {
+    if (window.confirm('¿Estás seguro de cancelar solo el cobro automático? El club mantendrá su acceso.')) {
+      cancelRecurringMutation.mutate(id!);
+    }
+  };
 
   const formatDate = (dateString?: string | null) => {
     if (!dateString) return 'N/A';
@@ -69,19 +91,44 @@ export function ClubDetailPage() {
   return (
     <div className="space-y-6">
       {/* Back + Title */}
-      <div className="flex items-center gap-3">
-        <button 
-          onClick={() => {
-            if (window.history.length > 2) navigate(-1);
-            else navigate('/clubs');
-          }} 
-          className="p-2 rounded-lg border border-border hover:bg-bg text-text-secondary hover:text-text transition"
-        >
-          <ArrowLeft size={18} />
-        </button>
-        <div>
-          <h1 className="text-xl font-bold tracking-tight text-text">Detalle del Club</h1>
-          <p className="text-sm text-text-secondary">{club.name}</p>
+      <div className="flex items-center justify-between gap-3 flex-wrap">
+        <div className="flex items-center gap-3">
+          <button 
+            onClick={() => {
+              if (window.history.length > 2) navigate(-1);
+              else navigate('/clubs');
+            }} 
+            className="p-2 rounded-lg border border-border hover:bg-bg text-text-secondary hover:text-text transition"
+          >
+            <ArrowLeft size={18} />
+          </button>
+          <div>
+            <h1 className="text-xl font-bold tracking-tight text-text">Detalle del Club</h1>
+            <p className="text-sm text-text-secondary">{club.name}</p>
+          </div>
+        </div>
+        
+        <div className="flex items-center gap-2">
+          {club.mpSubscriptionId && club.mpStatus !== 'cancelled' && (
+            <button 
+              onClick={handleCancelRecurring}
+              disabled={cancelRecurringMutation.isPending}
+              className="flex items-center gap-1.5 px-3 py-1.5 bg-white hover:bg-red-50 disabled:opacity-50 text-red-600 border border-red-200 rounded-lg text-sm font-medium transition-colors shadow-sm"
+              title="Cancela la suscripción en MercadoPago. El club sigue activo hasta que termine su periodo."
+            >
+              <XCircle size={16} /> Cancelar MP
+            </button>
+          )}
+          {club.status !== 'SUSPENDED' && (
+            <button 
+              onClick={handleCancelAndRevert}
+              disabled={cancelAndRevertMutation.isPending}
+              className="flex items-center gap-1.5 px-3 py-1.5 bg-red-600 hover:bg-red-700 disabled:opacity-50 text-white rounded-lg text-sm font-medium transition-colors shadow-sm"
+              title="Suspende el club inmediatamente, bloqueando el acceso al sistema."
+            >
+              <Trash2 size={16} /> Suspender Inmediatamente
+            </button>
+          )}
         </div>
       </div>
 
@@ -96,11 +143,22 @@ export function ClubDetailPage() {
         </div>
       )}
       {isPendingMP && !isPastDue && (
-        <div className="flex items-center gap-3 p-4 rounded-xl border border-orange-200 bg-orange-50 text-orange-800">
-          <ShieldAlert size={18} className="flex-shrink-0" />
-          <div className="flex-1">
-            <p className="font-semibold text-sm">Pago de Mercado Pago pendiente</p>
-            <p className="text-xs">La suscripción está en estado "pending" en MP. Si el cliente ya pagó, usa "Liberar acceso" para reactivarle.</p>
+        <div className="flex flex-col sm:flex-row gap-4 justify-between items-start sm:items-center p-4 rounded-xl border border-orange-200 bg-orange-50 text-orange-800">
+          <div className="flex gap-3">
+            <ShieldAlert size={18} className="flex-shrink-0 mt-0.5" />
+            <div className="flex-1">
+              <p className="font-semibold text-sm">Pago de Mercado Pago pendiente</p>
+              <p className="text-xs mt-0.5">La suscripción está en estado "pending" en MP. Si el cliente ya pagó, usa "Liberar acceso" para reactivarle.</p>
+            </div>
+          </div>
+          <div className="flex items-center gap-2 w-full sm:w-auto mt-2 sm:mt-0">
+            <button 
+              onClick={handleReleaseAccess}
+              disabled={releaseMutation.isPending}
+              className="flex-1 sm:flex-none flex items-center justify-center gap-1.5 px-3 py-1.5 bg-orange-600 hover:bg-orange-700 disabled:opacity-50 text-white rounded-lg text-xs font-medium transition-colors"
+            >
+              <PlayCircle size={14} /> Liberar
+            </button>
           </div>
         </div>
       )}
