@@ -5,7 +5,7 @@ import { es } from 'date-fns/locale';
 import { useClubPayments, useSubscriptionActions } from '../../subscriptions/hooks/useSubscriptions';
 import { Link } from 'react-router-dom';
 import { ExtendSubscriptionModal } from '../../subscriptions/components/modals/ExtendSubscriptionModal';
-import { AssignAddOnModal } from '../../subscriptions/components/modals/AssignAddOnModal';
+import { AssignAddOnModal } from './AssignAddOnModal';
 
 interface ClubBillingTabProps {
   club: any;
@@ -313,7 +313,9 @@ export function ClubBillingTab({ club }: ClubBillingTabProps) {
 
       {/* Modals invisibles hasta activarse */}
       {activeModal === 'extend' && <ExtendSubscriptionModal club={club} onClose={() => setActiveModal(null)} />}
-      {activeModal === 'addons' && <AssignAddOnModal club={club} onClose={() => setActiveModal(null)} />}
+      {activeModal === 'addons' && (
+        <AssignAddOnModal isOpen={true} clubId={club.id} onClose={() => setActiveModal(null)} />
+      )}
       
     </div>
   );
