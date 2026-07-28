@@ -5,12 +5,13 @@ import {
   Search, Building2, Users, Calendar, CreditCard, 
   TrendingUp, AlertTriangle, Clock, CheckCircle2, XCircle,
   ChevronLeft, ChevronRight, SlidersHorizontal, X,
-  ArrowDownWideNarrow, ArrowUpNarrowWide
+  ArrowDownWideNarrow, ArrowUpNarrowWide, Trash2
 } from 'lucide-react';
 
 import { format } from 'date-fns';
 import { es } from 'date-fns/locale';
 import type { ClubListItem } from '@/services/clubs/clubs.types';
+import { DeleteClubModal } from './components/DeleteClubModal';
 
 const STATUS_CONFIG: Record<string, { label: string; class: string; icon: React.ReactNode }> = {
   ACTIVE: { label: 'Activo', class: 'bg-success/10 text-success border-success/20', icon: <CheckCircle2 size={12} /> },
@@ -28,7 +29,7 @@ const BILLING_CONFIG: Record<string, { label: string; class: string }> = {
 
 const STATUS_FILTERS = ['TRIAL', 'ACTIVE', 'PAST_DUE', 'SUSPENDED'] as const;
 
-function ClubCard({ club }: { club: ClubListItem }) {
+function ClubCard({ club, onDeleteClick }: { club: ClubListItem; onDeleteClick: (club: ClubListItem) => void }) {
   const statusCfg = STATUS_CONFIG[club.status] ?? STATUS_CONFIG.ACTIVE;
   const billCfg = BILLING_CONFIG[club.billingStatus] ?? BILLING_CONFIG.ACTIVE;
   const isPendingMP = (club as any).mpStatus === 'pending';
@@ -128,6 +129,12 @@ function ClubCard({ club }: { club: ClubListItem }) {
         <Link to={`/clubs/${club.id}`} className="text-xs text-primary hover:underline font-medium flex items-center gap-1">
           <TrendingUp size={12} /> Gestionar Club y Facturación
         </Link>
+        <button
+          onClick={() => onDeleteClick(club)}
+          className="text-xs text-danger hover:underline font-medium flex items-center gap-1"
+        >
+          <Trash2 size={12} /> Eliminar
+        </button>
       </div>
     </div>
   );
@@ -147,6 +154,8 @@ export function ClubsPage() {
   const [searchInput, setSearchInput] = useState(search);
   const [minPlayersInput, setMinPlayersInput] = useState(minPlayers);
   const [maxPlayersInput, setMaxPlayersInput] = useState(maxPlayers);
+  
+  const [clubToDelete, setClubToDelete] = useState<ClubListItem | null>(null);
 
   const updateParams = (updates: Record<string, string | undefined>) => {
     const newParams = new URLSearchParams(searchParams);
@@ -323,7 +332,7 @@ export function ClubsPage() {
           ) : (
             <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-4">
               {data?.data.map((club) => (
-                <ClubCard key={club.id} club={club} />
+                <ClubCard key={club.id} club={club} onDeleteClick={setClubToDelete} />
               ))}
             </div>
           )}
@@ -351,6 +360,15 @@ export function ClubsPage() {
             </div>
           )}
         </>
+      )}
+
+      {clubToDelete && (
+        <DeleteClubModal
+          clubId={clubToDelete.id}
+          clubName={clubToDelete.name}
+          isOpen={!!clubToDelete}
+          onClose={() => setClubToDelete(null)}
+        />
       )}
     </div>
   );

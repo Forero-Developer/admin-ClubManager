@@ -9,6 +9,7 @@ import {
 import { ClubPlayersTab } from './components/ClubPlayersTab';
 import { ClubBillingTab } from './components/ClubBillingTab';
 import { AssignAddOnModal } from './components/AssignAddOnModal';
+import { DeleteClubModal } from './components/DeleteClubModal';
 import { format } from 'date-fns';
 import { es } from 'date-fns/locale';
 
@@ -28,6 +29,7 @@ export function ClubDetailPage() {
   const { data: planHistory } = useClubPlanHistory(id || '');
   const [activeTab, setActiveTab] = useState<TabKey>('billing');
   const [isAssignAddOnOpen, setIsAssignAddOnOpen] = useState(false);
+  const [isDeleteModalOpen, setIsDeleteModalOpen] = useState(false);
 
   const releaseMutation = useReleaseAccess();
   const cancelAndRevertMutation = useCancelAndRevert();
@@ -123,12 +125,19 @@ export function ClubDetailPage() {
             <button 
               onClick={handleCancelAndRevert}
               disabled={cancelAndRevertMutation.isPending}
-              className="flex items-center gap-1.5 px-3 py-1.5 bg-red-600 hover:bg-red-700 disabled:opacity-50 text-white rounded-lg text-sm font-medium transition-colors shadow-sm"
+              className="flex items-center gap-1.5 px-3 py-1.5 bg-orange-600 hover:bg-orange-700 disabled:opacity-50 text-white rounded-lg text-sm font-medium transition-colors shadow-sm"
               title="Suspende el club inmediatamente, bloqueando el acceso al sistema."
             >
-              <Trash2 size={16} /> Suspender Inmediatamente
+              <AlertTriangle size={16} /> Suspender Inmediatamente
             </button>
           )}
+          <button 
+            onClick={() => setIsDeleteModalOpen(true)}
+            className="flex items-center gap-1.5 px-3 py-1.5 bg-red-600 hover:bg-red-700 text-white rounded-lg text-sm font-medium transition-colors shadow-sm"
+            title="Eliminar club definitivamente."
+          >
+            <Trash2 size={16} /> Eliminar
+          </button>
         </div>
       </div>
 
@@ -465,6 +474,15 @@ export function ClubDetailPage() {
           isOpen={isAssignAddOnOpen}
           onClose={() => setIsAssignAddOnOpen(false)}
           clubId={club.id}
+        />
+      )}
+      {club && (
+        <DeleteClubModal
+          clubId={club.id}
+          clubName={club.name}
+          isOpen={isDeleteModalOpen}
+          onClose={() => setIsDeleteModalOpen(false)}
+          onSuccess={() => navigate('/clubs')}
         />
       )}
     </div>

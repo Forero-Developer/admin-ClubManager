@@ -60,3 +60,14 @@ export function useCancelRecurring() {
     },
   });
 }
+
+export function useDeleteClub() {
+  const queryClient = useQueryClient();
+  
+  return useMutation({
+    mutationFn: (id: string) => clubsService.delete(id),
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ['clubs'] });
+    },
+  });
+}
