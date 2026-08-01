@@ -115,7 +115,7 @@ export function ClubRegisterPaymentPage() {
 
     // Solo autocalculamos la primera vez que se carga la data
     if (!hasAutoCalculated) {
-      const currentPlayers = club._count?.players || 0;
+      const billablePlayers = club.billablePlayersCount ?? club.playerStats?.billable ?? club._count?.players ?? 0;
       
       // 1. Inicializar con los addons que YA tiene activos el club y que NO son de pago único
       let initialAddOns = (club.addOns || [])
@@ -130,9 +130,9 @@ export function ClubRegisterPaymentPage() {
           quantity: a.quantity
         }));
       
-      // 2. Si excede la capacidad, asegurar que al menos tenga los paquetes de jugadores necesarios
-      if (currentPlayers > capacity) {
-        const extraPlayers = currentPlayers - capacity;
+      // 2. Si los jugadores a cobrar exceden la capacidad, asegurar paquetes necesarios
+      if (billablePlayers > capacity) {
+        const extraPlayers = billablePlayers - capacity;
         const requiredQuantity = Math.ceil(extraPlayers / 10);
         
         const playerPackAddOn = addOnsData.find((a: any) => a.code === 'player_pack_10') || addOnsData[0];
@@ -331,7 +331,8 @@ export function ClubRegisterPaymentPage() {
     );
   }
 
-  const currentPlayers = club._count?.players || 0;
+  const totalPlayers = club.playerStats?.total ?? club.totalPlayersCount ?? club._count?.players ?? 0;
+  const billablePlayers = club.billablePlayersCount ?? club.playerStats?.billable ?? totalPlayers;
   
   // Calcular capacidad adicional de los addons seleccionados
   let additionalCapacity = 0;
@@ -347,7 +348,7 @@ export function ClubRegisterPaymentPage() {
   }
 
   const totalCapacity = baseCapacity + additionalCapacity;
-  const isExceeding = currentPlayers > totalCapacity;
+  const isExceeding = billablePlayers > totalCapacity;
 
   let uiDiscountPercent = 0;
 
@@ -413,13 +414,43 @@ export function ClubRegisterPaymentPage() {
               </div>
 
               <div className="flex justify-between items-center py-2 border-b border-border">
-                <span className="text-text-secondary">Jugadores Activos</span>
-                <span className="font-medium text-text">{currentPlayers}</span>
+                <div>
+                  <span className="text-text-secondary font-medium block">Jugadores a Cobrar</span>
+                  <span className="text-[11px] text-text-secondary">Activos + Suspendidos</span>
+                </div>
+                <div className="text-right">
+                  <span className="font-bold text-base text-primary">{billablePlayers}</span>
+                  <span className="text-xs text-text-secondary block">de {totalPlayers} totales</span>
+                </div>
+              </div>
+
+              {club.playerStats && (
+                <div className="bg-bg/60 p-2.5 rounded-lg text-xs space-y-1.5 border border-border/50">
+                  <div className="flex justify-between text-text-secondary">
+                    <span>🟢 Activos:</span>
+                    <span className="font-semibold text-text">{club.playerStats.active}</span>
+                  </div>
+                  <div className="flex justify-between text-text-secondary">
+                    <span>🟡 Suspendidos:</span>
+                    <span className="font-semibold text-text">{club.playerStats.suspended}</span>
+                  </div>
+                  <div className="flex justify-between text-text-secondary">
+                    <span>⚪ Inactivos / Retirados:</span>
+                    <span className="font-semibold text-text">{club.playerStats.inactive + club.playerStats.droppedOut}</span>
+                  </div>
+                </div>
+              )}
+
+              <div className="flex justify-between items-center py-2 border-b border-border">
+                <span className="text-text-secondary">Capacidad del Plan Base</span>
+                <span className="font-medium text-text">{baseCapacity} jug.</span>
               </div>
 
               <div className="flex justify-between items-center py-2">
-                <span className="text-text-secondary">Límite del Plan</span>
-                <span className="font-medium text-text">{baseCapacity}</span>
+                <span className="text-text-secondary">Capacidad Total con AddOns</span>
+                <span className={`font-semibold ${totalCapacity >= billablePlayers ? 'text-success' : 'text-danger'}`}>
+                  {totalCapacity} jug.
+                </span>
               </div>
             </div>
 
@@ -428,10 +459,13 @@ export function ClubRegisterPaymentPage() {
                 <div className="flex gap-3">
                   <AlertTriangle className="text-warning shrink-0" size={20} />
                   <div>
-                    <h3 className="font-medium text-warning text-sm">Excede límite de jugadores</h3>
+                    <h3 className="font-medium text-warning text-sm">Excede capacidad contratada</h3>
                     <p className="text-xs text-warning/80 mt-1">
-                      El club tiene {currentPlayers - baseCapacity} jugador(es) por encima de su plan base.
-                      Se recomienda cobrar AddOns adicionales.
+                      El club tiene {billablePlayers - totalCapacity} jugador(es) a cobrar por encima de la capacidad ({totalCapacity}).
+                      {club.playerStats && (club.playerStats.inactive + club.playerStats.droppedOut > 0) && (
+                        <span> (Los {club.playerStats.inactive + club.playerStats.droppedOut} inactivos/retirados no se computan).</span>
+                      )}
+                      {' '}Aumenta los paquetes de jugadores para continuar.
                     </p>
                   </div>
                 </div>
@@ -742,7 +776,7 @@ export function ClubRegisterPaymentPage() {
           {isExceeding && (
             <div className="bg-danger/10 text-danger p-3 rounded-lg text-sm flex items-center gap-2">
               <AlertTriangle size={18} className="shrink-0" />
-              <span>La capacidad ({totalCapacity} jug.) no cubre los {currentPlayers} jugadores actuales.</span>
+              <span>La capacidad ({totalCapacity} jug.) no cubre los {billablePlayers} jugadores a cobrar (activos/suspendidos).</span>
             </div>
           )}
         </div>

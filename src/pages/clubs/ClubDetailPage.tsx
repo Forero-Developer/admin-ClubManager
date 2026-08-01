@@ -279,8 +279,15 @@ export function ClubDetailPage() {
                 </div>
                 <div className="bg-bg/60 rounded-lg p-3">
                   <p className="text-[10px] text-text-secondary uppercase tracking-wide mb-1 flex items-center gap-1"><Users size={10} /> Jugadores</p>
-                  <p className="font-semibold text-text text-sm">{club._count.players}</p>
-                  <p className="text-[10px] text-text-secondary">{club._count.coaches ?? 0} entrenadores</p>
+                  <p className="font-semibold text-text text-sm">
+                    {club.billablePlayersCount ?? club.playerStats?.billable ?? club._count.players}{' '}
+                    <span className="text-xs font-normal text-text-secondary">/ {club._count.players} tot.</span>
+                  </p>
+                  <p className="text-[10px] text-text-secondary">
+                    {club.playerStats 
+                      ? `${club.playerStats.active} act · ${club.playerStats.suspended} susp`
+                      : `${club._count.coaches ?? 0} entrenadores`}
+                  </p>
                 </div>
                 <div className="bg-bg/60 rounded-lg p-3">
                   <p className="text-[10px] text-text-secondary uppercase tracking-wide mb-1 flex items-center gap-1"><Calendar size={10} /> Vence</p>

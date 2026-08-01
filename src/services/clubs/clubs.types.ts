@@ -48,10 +48,26 @@ export interface ClubListItem {
     coaches: number;
     users: number;
   };
+  totalPlayersCount?: number;
+  activePlayersCount?: number;
+  suspendedPlayersCount?: number;
+  billablePlayersCount?: number;
+  playerStats?: ClubPlayerStats;
   users: Array<{
     email: string;
     googleId: string | null;
   }>;
+}
+
+export interface ClubPlayerStats {
+  total: number;
+  billable: number;
+  active: number;
+  suspended: number;
+  inactive: number;
+  droppedOut: number;
+  pending: number;
+  rejected: number;
 }
 
 export interface ClubDetail extends ClubListItem {
@@ -65,6 +81,9 @@ export interface ClubDetail extends ClubListItem {
   lastChargeAt: string | null;
   currentBaseAmount: number | null;
   currentAddonAmount: number | null;
+  billablePlayersCount?: number;
+  totalPlayersCount?: number;
+  playerStats?: ClubPlayerStats;
   addOns: Array<{
     id: string;
     status: string;

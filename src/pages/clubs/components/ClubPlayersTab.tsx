@@ -3,6 +3,15 @@ import { usePlayers, usePlayerDetail } from '../hooks/usePlayers';
 import { Loader2, Search, UserCircle, ChevronRight, X } from 'lucide-react';
 import * as Dialog from '@radix-ui/react-dialog';
 
+const PLAYER_STATUS_MAP: Record<string, { label: string; bg: string; text: string }> = {
+  ACTIVE: { label: 'Activo', bg: 'bg-emerald-500/10', text: 'text-emerald-600' },
+  SUSPENDED: { label: 'Suspendido', bg: 'bg-amber-500/10', text: 'text-amber-600' },
+  INACTIVE: { label: 'Inactivo', bg: 'bg-slate-500/10', text: 'text-slate-600' },
+  DROPPED_OUT: { label: 'Retirado', bg: 'bg-rose-500/10', text: 'text-rose-600' },
+  PENDING: { label: 'Pendiente', bg: 'bg-blue-500/10', text: 'text-blue-600' },
+  REJECTED: { label: 'Rechazado', bg: 'bg-red-500/10', text: 'text-red-600' },
+};
+
 export function ClubPlayersTab({ clubId }: { clubId: string }) {
   const [page, setPage] = useState(1);
   const [search, setSearch] = useState('');
@@ -39,9 +48,11 @@ export function ClubPlayersTab({ clubId }: { clubId: string }) {
         >
           <option value="">Todos los estados</option>
           <option value="ACTIVE">Activo</option>
-          <option value="PENDING">Pendiente</option>
-          <option value="INACTIVE">Inactivo</option>
           <option value="SUSPENDED">Suspendido</option>
+          <option value="INACTIVE">Inactivo</option>
+          <option value="DROPPED_OUT">Retirado</option>
+          <option value="PENDING">Pendiente</option>
+          <option value="REJECTED">Rechazado</option>
         </select>
       </div>
 
@@ -57,39 +68,49 @@ export function ClubPlayersTab({ clubId }: { clubId: string }) {
         </div>
       ) : (
         <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
-          {players.map((player) => (
-            <div 
-              key={player.id} 
-              className="flex items-center gap-3 p-3 rounded-xl border border-border bg-white hover:border-primary/40 cursor-pointer transition-colors shadow-sm"
-              onClick={() => setSelectedPlayerId(player.id)}
-            >
-              {player.photoUrl && !player.photoUrl.includes('via.placeholder.com') ? (
-                <img 
-                  src={player.photoUrl} 
-                  alt={player.fullName} 
-                  className="w-10 h-10 rounded-full object-cover border border-border"
-                  onError={(e) => {
-                    (e.target as HTMLImageElement).style.display = 'none';
-                    const next = (e.target as HTMLImageElement).nextElementSibling;
-                    if (next) next.classList.remove('hidden');
-                  }}
-                />
-              ) : null}
-              
-              <div className={`w-10 h-10 rounded-full bg-primary/10 text-primary flex items-center justify-center font-bold text-sm ${
-                (player.photoUrl && !player.photoUrl.includes('via.placeholder.com')) ? 'hidden' : ''
-              }`}>
-                {player.fullName.charAt(0)}
+          {players.map((player) => {
+            const st = player.status ? PLAYER_STATUS_MAP[player.status] : null;
+            return (
+              <div 
+                key={player.id} 
+                className="flex items-center gap-3 p-3 rounded-xl border border-border bg-white hover:border-primary/40 cursor-pointer transition-colors shadow-sm"
+                onClick={() => setSelectedPlayerId(player.id)}
+              >
+                {player.photoUrl && !player.photoUrl.includes('via.placeholder.com') ? (
+                  <img 
+                    src={player.photoUrl} 
+                    alt={player.fullName} 
+                    className="w-10 h-10 rounded-full object-cover border border-border"
+                    onError={(e) => {
+                      (e.target as HTMLImageElement).style.display = 'none';
+                      const next = (e.target as HTMLImageElement).nextElementSibling;
+                      if (next) next.classList.remove('hidden');
+                    }}
+                  />
+                ) : null}
+                
+                <div className={`w-10 h-10 rounded-full bg-primary/10 text-primary flex items-center justify-center font-bold text-sm ${
+                  (player.photoUrl && !player.photoUrl.includes('via.placeholder.com')) ? 'hidden' : ''
+                }`}>
+                  {player.fullName.charAt(0)}
+                </div>
+                <div className="flex-1 min-w-0">
+                  <div className="flex items-center gap-2">
+                    <p className="font-semibold text-text text-sm truncate">{player.fullName}</p>
+                    {st && (
+                      <span className={`text-[10px] px-1.5 py-0.2 rounded-full font-medium shrink-0 ${st.bg} ${st.text}`}>
+                        {st.label}
+                      </span>
+                    )}
+                  </div>
+                  <p className="text-[10px] text-text-secondary mt-0.5 uppercase tracking-wide truncate">
+                    {player.category?.name ?? 'Sin Categoría'} • {player.documentType} {player.documentNumber}
+                  </p>
+                </div>
+                <ChevronRight size={16} className="text-text-secondary/50" />
               </div>
-              <div className="flex-1 min-w-0">
-                <p className="font-semibold text-text text-sm truncate">{player.fullName}</p>
-                <p className="text-[10px] text-text-secondary mt-0.5 uppercase tracking-wide truncate">
-                  {player.category?.name ?? 'Sin Categoría'} • {player.documentType} {player.documentNumber}
-                </p>
-              </div>
-              <ChevronRight size={16} className="text-text-secondary/50" />
-            </div>
-          ))}
+            );
+          })}
         </div>
       )}
 

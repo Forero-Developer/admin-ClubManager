@@ -194,6 +194,17 @@ function SubRow({ club }: { club: any }) {
         )}
       </td>
       <td className="px-4 py-3">
+        <p className="font-medium text-text">
+          {club.billablePlayersCount ?? club._count?.players ?? 0}{' '}
+          <span className="text-[11px] text-text-secondary font-normal">/ {club._count?.players ?? 0}</span>
+        </p>
+        <p className="text-[10px] text-text-secondary">
+          {club.playerStats 
+            ? `${club.playerStats.active} act · ${club.playerStats.suspended} susp`
+            : 'a cobrar / tot.'}
+        </p>
+      </td>
+      <td className="px-4 py-3">
         <div className="flex flex-col items-start gap-0.5">
           <span className="flex items-center gap-1">
             {METHOD_ICONS[club.billingMethod] ?? <ReceiptText size={14} className="text-text-secondary" />}
@@ -432,7 +443,7 @@ export function SubscriptionsPage() {
             <table className="w-full text-sm text-left">
               <thead className="text-[10px] text-text-secondary uppercase bg-bg/50 border-b border-border">
                 <tr>
-                  {['Club', 'Estado', 'Plan', 'Método', 'Próx. Cobro', 'Monto Total', ''].map(h => (
+                  {['Club', 'Estado', 'Plan', 'Jugadores', 'Método', 'Próx. Cobro', 'Monto Total', ''].map(h => (
                     <th key={h} className="px-4 py-3 font-semibold tracking-wider">{h}</th>
                   ))}
                 </tr>
@@ -440,12 +451,12 @@ export function SubscriptionsPage() {
               <tbody className="divide-y divide-border">
                 {subsLoading
                   ? Array.from({ length: 8 }).map((_, i) => (
-                      <tr key={i}><td colSpan={7} className="px-4 py-3"><div className="h-4 bg-border rounded animate-pulse" /></td></tr>
+                      <tr key={i}><td colSpan={8} className="px-4 py-3"><div className="h-4 bg-border rounded animate-pulse" /></td></tr>
                     ))
                   : subs?.data.map(club => <SubRow key={club.id} club={club} />)
                 }
                 {!subsLoading && subs?.data.length === 0 && (
-                  <tr><td colSpan={7} className="px-4 py-12 text-center text-text-secondary">No hay suscripciones con esos filtros.</td></tr>
+                  <tr><td colSpan={8} className="px-4 py-12 text-center text-text-secondary">No hay suscripciones con esos filtros.</td></tr>
                 )}
               </tbody>
             </table>

@@ -109,8 +109,19 @@ function ClubCard({ club, onDeleteClick }: { club: ClubListItem; onDeleteClick: 
             <p className="text-[10px] text-text-secondary uppercase tracking-wide font-medium flex items-center gap-1 mb-1">
               <Users size={10} /> Miembros
             </p>
-            <p className="text-sm font-semibold text-text">{club._count.players}</p>
-            <p className="text-[10px] text-text-secondary">jugadores</p>
+            <p className="text-sm font-semibold text-text">
+              {club.billablePlayersCount !== undefined ? (
+                <>
+                  {club.billablePlayersCount}{' '}
+                  <span className="text-xs font-normal text-text-secondary">/ {club._count.players}</span>
+                </>
+              ) : (
+                club._count.players
+              )}
+            </p>
+            <p className="text-[10px] text-text-secondary">
+              {club.billablePlayersCount !== undefined ? 'a cobrar / totales' : 'jugadores'}
+            </p>
           </div>
         </div>
 
