@@ -197,7 +197,7 @@ export function ClubDetailPage() {
                   
                   <div className="flex items-center gap-2 text-sm text-text-secondary font-medium">
                     <MapPin size={14} className="text-primary/70" />
-                    <span>{(club as any).city}, {club.country.name}</span>
+                    <span>{club.city ? `${club.city.name}, ${club.city.department.name} · ` : ''}{club.country.name}</span>
                     <span className="text-border mx-2">•</span>
                     <Calendar size={14} className="text-primary/70" />
                     <span>Registrado {formatDate(club.createdAt)}</span>

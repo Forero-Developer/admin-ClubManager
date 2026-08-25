@@ -83,7 +83,9 @@ function ClubCard({ club, onDeleteClick }: { club: ClubListItem; onDeleteClick: 
                   {club.email}
                 </p>
               )}
-              <p className="text-[10px] text-text-secondary/70 truncate">{club.country.name} · {club.country.code}</p>
+              <p className="text-[10px] text-text-secondary/70 truncate">
+                {club.city ? `${club.city.name}, ${club.city.department.name} · ` : ''}{club.country.name}
+              </p>
               <p className="text-[10px] text-text-secondary/70 truncate">Registrado: {formatDate(club.createdAt)}</p>
             </div>
           </div>

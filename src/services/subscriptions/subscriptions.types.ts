@@ -202,6 +202,8 @@ export interface SubscriptionAnalytics {
   totalRevenue: number;
   baseRevenue: number;
   addonRevenue: number;
+  recurringAddonRevenue: number;
+  oneTimeAddonRevenue: number;
   byStatus: Record<string, number>;
   tierBreakdown: AnalyticsTierEntry[];
   monthlyRevenue: MonthlyRevenueEntry[];

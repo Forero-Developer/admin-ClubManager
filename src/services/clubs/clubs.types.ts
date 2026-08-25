@@ -34,6 +34,7 @@ export interface ClubListItem {
   trialEndsAt: string | null;
   billingMethod: string;
   country: { name: string; code: string; currency: string };
+  city: { name: string; department: { name: string } } | null;
   sport: { name: string; code: string } | null;
   subscriptionPrice: {
     id: string;

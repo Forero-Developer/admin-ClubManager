@@ -302,8 +302,8 @@ export function SubscriptionsPage() {
             </div>
         ) : (
           <div className="grid grid-cols-2 lg:grid-cols-4 gap-4">
-            <MiniStat label="Suscripciones y Jugadores" value={formatCurrency((analytics?.baseRevenue ?? 0) + ((analytics as any)?.recurringAddonRevenue ?? 0))} sub="Ingresos recurrentes" icon={<TrendingUp size={20} className="text-blue-500" />} accent="border-blue-200" />
-            <MiniStat label="Mensajes de WSP (Pagos Únicos)" value={formatCurrency((analytics as any)?.oneTimeAddonRevenue ?? 0)} sub="Paquetes de mensajes" icon={<Package size={20} className="text-purple-500" />} accent="border-purple-200" />
+            <MiniStat label="Suscripciones y Jugadores" value={formatCurrency((analytics?.baseRevenue ?? 0) + (analytics?.recurringAddonRevenue ?? 0))} sub="Ingresos recurrentes" icon={<TrendingUp size={20} className="text-blue-500" />} accent="border-blue-200" />
+            <MiniStat label="Mensajes de WSP (Pagos Únicos)" value={formatCurrency(analytics?.oneTimeAddonRevenue ?? 0)} sub="Paquetes de mensajes" icon={<Package size={20} className="text-purple-500" />} accent="border-purple-200" />
             <MiniStat label="Ticket Promedio"       value={formatCurrency(
               (analytics?.tierBreakdown?.reduce((acc: any, t: any) => acc + t.totalRevenue, 0) ?? 0) / 
               (analytics?.tierBreakdown?.reduce((acc: any, t: any) => acc + t.clubCount, 0) || 1)
