@@ -210,9 +210,9 @@ function SubRow({ club }: { club: any }) {
             {METHOD_ICONS[club.billingMethod] ?? <ReceiptText size={14} className="text-text-secondary" />}
             <span className="text-text-secondary text-xs">{club.billingMethod ?? '—'}</span>
           </span>
-          {club.mpSubscriptionId && club.billingMethod !== 'CARD' && (
-            <span className="text-[9px] text-blue-500 font-semibold bg-blue-50 px-1.5 py-0.5 rounded-full" title="Suscripción MP sigue activa para el próximo cobro">
-              MP Activo
+          {club.paymentProfile?.status === 'AVAILABLE' && club.billingMethod !== 'CARD' && (
+            <span className="text-[9px] text-blue-500 font-semibold bg-blue-50 px-1.5 py-0.5 rounded-full" title="El club tiene un método de pago guardado en Wompi">
+              Wompi guardado
             </span>
           )}
         </div>

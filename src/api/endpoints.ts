@@ -13,9 +13,9 @@ export const ENDPOINTS = {
     list: '/admin/clubs',
     byId: (id: string) => `/admin/clubs/${id}`,
     planHistory: (id: string) => `/admin/clubs/${id}/plan-history`,
-    releaseAccess: (id: string) => `/admin/clubs/${id}/mercadopago/release`,
-    cancelAndRevert: (id: string) => `/admin/clubs/${id}/mercadopago/cancel`,
-    cancelRecurring: (id: string) => `/admin/clubs/${id}/mercadopago/cancel-recurring`,
+    releaseAccess: (id: string) => `/admin/clubs/${id}/payment-profile/release`,
+    cancelAndRevert: (id: string) => `/admin/clubs/${id}/payment-profile/cancel`,
+    cancelRecurring: (id: string) => `/admin/clubs/${id}/payment-profile/cancel-recurring`,
   },
   players: {
     list: (clubId: string) => `/admin/clubs/${clubId}/players`,

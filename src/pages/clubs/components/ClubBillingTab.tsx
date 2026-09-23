@@ -26,8 +26,8 @@ export function ClubBillingTab({ club }: ClubBillingTabProps) {
     return format(new Date(dateString), "d 'de' MMMM, yyyy", { locale: es });
   };
 
-  const handleCancelMP = () => {
-    if (confirm('¿Estás seguro de cancelar la suscripción automática en Mercado Pago? El club pasará a pago manual.')) {
+  const handleCancelPaymentProfile = () => {
+    if (confirm('¿Estás seguro de desactivar el método de pago guardado en Wompi? El club deberá pagar manualmente su próximo ciclo.')) {
       cancelSubscription.mutate({ clubId: club.id });
     }
   };
@@ -68,9 +68,9 @@ export function ClubBillingTab({ club }: ClubBillingTabProps) {
             </h3>
             <div className="bg-surface rounded-xl border border-border overflow-hidden">
               {[
-                { 
-                  label: club.billingMethod === 'CARD' ? 'Próximo Cobro (MP)' : 'Vencimiento del Plan', 
-                  value: formatDate(club.billingMethod === 'CARD' ? club.nextChargeDate : (club.subscriptionEnd || club.nextChargeDate)) 
+                {
+                  label: club.billingMethod === 'CARD' ? 'Próximo Pago' : 'Vencimiento del Plan',
+                  value: formatDate(club.billingMethod === 'CARD' ? club.nextChargeDate : (club.subscriptionEnd || club.nextChargeDate))
                 },
                 { 
                   label: 'Último Pago Registrado', 
@@ -154,24 +154,24 @@ export function ClubBillingTab({ club }: ClubBillingTabProps) {
               <p className="text-xs text-text-secondary">Reactiva el club otorgándole días gratuitos.</p>
             </button>
 
-            {/* Acción 4: Cancelar MP */}
-            {club.mpSubscriptionId && club.mpStatus !== 'cancelled' ? (
-              <button 
-                onClick={handleCancelMP}
+            {/* Acción 4: Desactivar método de pago guardado */}
+            {club.paymentProfile?.status === 'AVAILABLE' ? (
+              <button
+                onClick={handleCancelPaymentProfile}
                 className="flex flex-col items-start p-4 bg-white rounded-xl border border-red-200 shadow-sm hover:shadow-md hover:border-red-500/50 transition-all text-left group"
               >
                 <div className="p-2 bg-red-50 text-red-600 rounded-lg mb-3 group-hover:scale-110 transition-transform">
                   <XCircle size={20} />
                 </div>
-                <h4 className="font-bold text-danger text-sm mb-1">Cortar Débito Automático</h4>
-                <p className="text-xs text-text-secondary">Cancela la recurrencia en MP. El club seguirá activo hasta su fecha de corte.</p>
+                <h4 className="font-bold text-danger text-sm mb-1">Desactivar Método de Pago</h4>
+                <p className="text-xs text-text-secondary">El club deberá pagar manualmente cada ciclo, sin ningún método guardado.</p>
               </button>
             ) : (
               <div className="flex flex-col items-start p-4 bg-gray-50 rounded-xl border border-border opacity-70 text-left">
                 <div className="p-2 bg-gray-200 text-gray-500 rounded-lg mb-3">
                   <CheckCircle2 size={20} />
                 </div>
-                <h4 className="font-bold text-text text-sm mb-1">Sin Débito Automático</h4>
+                <h4 className="font-bold text-text text-sm mb-1">Sin Método de Pago Guardado</h4>
                 <p className="text-xs text-text-secondary">El club ya está en modalidad de pago manual.</p>
               </div>
             )}

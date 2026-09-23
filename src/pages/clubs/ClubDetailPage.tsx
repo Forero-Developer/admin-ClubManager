@@ -4,7 +4,7 @@ import { useClubDetail, useClubPlanHistory, useReleaseAccess, useCancelAndRevert
 import { 
   ArrowLeft, Building2, MapPin, Users, Phone, Mail, Calendar, CreditCard,
   CheckCircle2, Clock, AlertTriangle, XCircle, Package, History,
-  Layers, ShieldAlert, MessageCircle, Copy, PlayCircle, Trash2 } from 'lucide-react'
+  Layers, MessageCircle, Copy, PlayCircle, Trash2 } from 'lucide-react'
 
 import { ClubPlayersTab } from './components/ClubPlayersTab';
 import { ClubBillingTab } from './components/ClubBillingTab';
@@ -80,7 +80,6 @@ export function ClubDetailPage() {
   }
 
   const statusCfg = STATUS_CONFIG[club.status] ?? STATUS_CONFIG.ACTIVE;
-  const isPendingMP = (club as any).mpStatus === 'pending';
   const isPastDue = club.status === 'PAST_DUE';
 
   const tabs: { key: TabKey; label: string; icon: React.ReactNode; count?: number }[] = [
@@ -111,14 +110,14 @@ export function ClubDetailPage() {
         </div>
         
         <div className="flex items-center gap-2">
-          {club.mpSubscriptionId && club.mpStatus !== 'cancelled' && (
-            <button 
+          {club.paymentProfile?.status === 'AVAILABLE' && (
+            <button
               onClick={handleCancelRecurring}
               disabled={cancelRecurringMutation.isPending}
               className="flex items-center gap-1.5 px-3 py-1.5 bg-white hover:bg-red-50 disabled:opacity-50 text-red-600 border border-red-200 rounded-lg text-sm font-medium transition-colors shadow-sm"
-              title="Cancela la suscripción en MercadoPago. El club sigue activo hasta que termine su periodo."
+              title="Desactiva el método de pago guardado en Wompi. El club sigue activo hasta que termine su periodo."
             >
-              <XCircle size={16} /> Cancelar MP
+              <XCircle size={16} /> Desactivar método de pago
             </button>
           )}
           {club.status !== 'SUSPENDED' && (
@@ -143,25 +142,16 @@ export function ClubDetailPage() {
 
       {/* Alert banners */}
       {isPastDue && (
-        <div className="flex items-center gap-3 p-4 rounded-xl border border-amber-200 bg-amber-50 text-amber-800">
-          <AlertTriangle size={18} className="flex-shrink-0" />
-          <div className="flex-1">
-            <p className="font-semibold text-sm">Club en mora</p>
-            <p className="text-xs">El club tiene pagos pendientes o fallidos. Usa las acciones en la esquina superior derecha para resolver.</p>
-          </div>
-        </div>
-      )}
-      {isPendingMP && !isPastDue && (
-        <div className="flex flex-col sm:flex-row gap-4 justify-between items-start sm:items-center p-4 rounded-xl border border-orange-200 bg-orange-50 text-orange-800">
+        <div className="flex flex-col sm:flex-row gap-4 justify-between items-start sm:items-center p-4 rounded-xl border border-amber-200 bg-amber-50 text-amber-800">
           <div className="flex gap-3">
-            <ShieldAlert size={18} className="flex-shrink-0 mt-0.5" />
+            <AlertTriangle size={18} className="flex-shrink-0 mt-0.5" />
             <div className="flex-1">
-              <p className="font-semibold text-sm">Pago de Mercado Pago pendiente</p>
-              <p className="text-xs mt-0.5">La suscripción está en estado "pending" en MP. Si el cliente ya pagó, usa "Liberar acceso" para reactivarle.</p>
+              <p className="font-semibold text-sm">Club en mora</p>
+              <p className="text-xs mt-0.5">El club tiene pagos pendientes o fallidos. Si el cliente ya pagó por otro medio, usa "Liberar acceso" para reactivarle.</p>
             </div>
           </div>
           <div className="flex items-center gap-2 w-full sm:w-auto mt-2 sm:mt-0">
-            <button 
+            <button
               onClick={handleReleaseAccess}
               disabled={releaseMutation.isPending}
               className="flex-1 sm:flex-none flex items-center justify-center gap-1.5 px-3 py-1.5 bg-orange-600 hover:bg-orange-700 disabled:opacity-50 text-white rounded-lg text-xs font-medium transition-colors"

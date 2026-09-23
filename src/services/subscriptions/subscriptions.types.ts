@@ -51,8 +51,12 @@ export interface SubscriptionListItem {
   trialEndsAt: string | null;
   nextChargeDate: string | null;
   lastChargeAt: string | null;
-  mpSubscriptionId: string | null;
-  mpStatus: string | null;
+  paymentProfile: {
+    status: 'PENDING' | 'AVAILABLE' | 'DECLINED';
+    paymentMethodType: 'CARD' | 'NEQUI' | 'PSE' | null;
+    cardBrand: string | null;
+    cardLastFour: string | null;
+  } | null;
   currentBaseAmount: number | null;
   currentAddonAmount: number | null;
   countryCode: string;

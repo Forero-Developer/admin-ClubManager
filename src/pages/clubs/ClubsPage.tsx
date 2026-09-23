@@ -32,14 +32,13 @@ const STATUS_FILTERS = ['TRIAL', 'ACTIVE', 'PAST_DUE', 'SUSPENDED'] as const;
 function ClubCard({ club, onDeleteClick }: { club: ClubListItem; onDeleteClick: (club: ClubListItem) => void }) {
   const statusCfg = STATUS_CONFIG[club.status] ?? STATUS_CONFIG.ACTIVE;
   const billCfg = BILLING_CONFIG[club.billingStatus] ?? BILLING_CONFIG.ACTIVE;
-  const isPendingMP = (club as any).mpStatus === 'pending';
 
   const formatDate = (d?: string | null) =>
     d ? format(new Date(d), "d MMM yy", { locale: es }) : '—';
 
   return (
     <div className={`group relative rounded-xl border bg-white shadow-sm hover:shadow-md transition-all duration-200 overflow-hidden ${
-      club.status === 'PAST_DUE' || isPendingMP ? 'border-amber-200' : 'border-border hover:border-primary/30'
+      club.status === 'PAST_DUE' ? 'border-amber-200' : 'border-border hover:border-primary/30'
     }`}>
       {/* Accent top bar */}
       <div className={`h-1 w-full ${
@@ -162,7 +161,6 @@ export function ClubsPage() {
   const minPlayers = searchParams.get('minPlayers') || '';
   const maxPlayers = searchParams.get('maxPlayers') || '';
   const orderByPlayers = searchParams.get('orderByPlayers') || '';
-  const mpStatusFilter = searchParams.get('mpStatus') || '';
 
   const [searchInput, setSearchInput] = useState(search);
   const [minPlayersInput, setMinPlayersInput] = useState(minPlayers);
@@ -194,7 +192,6 @@ export function ClubsPage() {
     minPlayers: minPlayers ? parseInt(minPlayers, 10) : undefined,
     maxPlayers: maxPlayers ? parseInt(maxPlayers, 10) : undefined,
     orderByPlayers: (orderByPlayers as any) || undefined,
-    mpStatus: mpStatusFilter || undefined,
   });
 
   const handleSearch = () => {
@@ -203,10 +200,6 @@ export function ClubsPage() {
 
   const handleStatusFilter = (status: string) => {
     updateParams({ status: statusFilter === status ? undefined : status, page: '1' });
-  };
-
-  const handleMpStatusFilter = (mpStatus: string) => {
-    updateParams({ mpStatus: mpStatusFilter === mpStatus ? undefined : mpStatus, page: '1' });
   };
 
   const handleSort = (direction: string) => {
@@ -309,17 +302,8 @@ export function ClubsPage() {
               </button>
             );
           })}
-          <div className="h-5 w-px bg-border mx-1"></div>
-          <button
-            onClick={() => handleMpStatusFilter('pending')}
-            className={`inline-flex items-center gap-1 px-2.5 py-1 rounded-full text-xs font-medium border transition-all ${
-              mpStatusFilter === 'pending' ? 'bg-blue-50 text-blue-700 border-blue-200 ring-2 ring-offset-1 ring-blue-500/30' : 'border-border text-text-secondary hover:border-blue-300'
-            }`}
-          >
-            <Clock size={12} /> MP Pendientes
-          </button>
-          {(statusFilter || mpStatusFilter) && (
-            <button onClick={() => updateParams({ status: undefined, mpStatus: undefined, page: '1' })} className="text-xs text-text-secondary hover:text-danger flex items-center gap-1">
+          {statusFilter && (
+            <button onClick={() => updateParams({ status: undefined, page: '1' })} className="text-xs text-text-secondary hover:text-danger flex items-center gap-1">
               <X size={12} /> Limpiar
             </button>
           )}

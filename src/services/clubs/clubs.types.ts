@@ -8,7 +8,14 @@ export interface ClubListQuery {
   minPlayers?: number;
   maxPlayers?: number;
   orderByPlayers?: 'asc' | 'desc';
-  mpStatus?: string;
+  paymentProfileStatus?: string;
+}
+
+export interface ClubPaymentProfile {
+  status: 'PENDING' | 'AVAILABLE' | 'DECLINED';
+  paymentMethodType: 'CARD' | 'NEQUI' | 'PSE' | null;
+  cardBrand: string | null;
+  cardLastFour: string | null;
 }
 
 export interface PaginatedResult<T> {
@@ -76,8 +83,7 @@ export interface ClubDetail extends ClubListItem {
   description: string | null;
   playerMonthlyFee: number;
   paymentDueDay: number;
-  mpSubscriptionId: string | null;
-  mpStatus: string | null;
+  paymentProfile: ClubPaymentProfile | null;
   nextChargeDate: string | null;
   lastChargeAt: string | null;
   currentBaseAmount: number | null;
