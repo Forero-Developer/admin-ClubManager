@@ -1,89 +1,151 @@
 import { useState } from 'react';
-import { formatCurrency } from '@/lib/utils';
+import { Link } from 'react-router-dom';
+import { motion } from 'framer-motion';
+import { ChevronRight, Info, TrendingUp, TrendingDown, Users } from 'lucide-react';
+import { Modal } from '@/components/ui/Modal';
+import { Pagination } from '@/components/ui/Pagination';
+import { Badge } from '@/components/ui/Badge';
+import { formatCurrency } from '@/lib/format';
+import type { MrrClub } from '@/services/dashboard/dashboard.types';
 import { useMrrClubs } from '../hooks/useMrrClubs';
 
 interface MrrDetailsModalProps {
+  open: boolean;
   onClose: () => void;
+  mrr: number;
+  currency: string;
 }
 
-export function MrrDetailsModal({ onClose }: MrrDetailsModalProps) {
-  const [page, setPage] = useState(1);
-  const { data: response, isLoading } = useMrrClubs(page);
+function PackChange({ club }: { club: MrrClub }) {
+  const { current, expected } = club.playerPacks;
+  if (current === expected) return null;
+  const up = expected > current;
+  return (
+    <Badge tone={up ? 'success' : 'warning'} className="gap-1">
+      {up ? <TrendingUp size={11} /> : <TrendingDown size={11} />}
+      {up ? `Creció: ${current} → ${expected} packs` : `Bajó: ${current} → ${expected} packs`}
+    </Badge>
+  );
+}
 
-  const clubs = response?.data;
-  const meta = response?.meta;
+function ClubRow({ club, index, rank, onNavigate }: { club: MrrClub; index: number; rank: number; onNavigate: () => void }) {
+  const included = club.maxPlayers ?? 0;
+  const packs = club.playerPacks.expected;
 
   return (
-    <div className="fixed inset-0 z-50 flex items-center justify-center bg-black bg-opacity-50">
-      <div className="bg-white rounded-lg shadow-xl w-full max-w-2xl max-h-[80vh] flex flex-col">
-        <div className="flex items-center justify-between p-4 border-b border-border">
-          <h2 className="text-lg font-bold text-text">Detalle de MRR (Clubes Activos)</h2>
-          <button onClick={onClose} className="text-text-secondary hover:text-text">
-            ✕
-          </button>
-        </div>
-        
-        <div className="p-4 overflow-y-auto flex-1">
-          {isLoading ? (
-            <p className="text-center text-text-secondary">Cargando clubes...</p>
-          ) : clubs && clubs.length > 0 ? (
-            <table className="w-full text-left border-collapse">
-              <thead>
-                <tr className="border-b border-border bg-background">
-                  <th className="p-2 font-medium text-sm text-text-secondary">Club</th>
-                  <th className="p-2 font-medium text-sm text-text-secondary">Base</th>
-                  <th className="p-2 font-medium text-sm text-text-secondary">Addons</th>
-                  <th className="p-2 font-medium text-sm text-text-secondary">Total</th>
-                </tr>
-              </thead>
-              <tbody>
-                {clubs.map((club: any) => (
-                  <tr key={club.id} className="border-b border-border hover:bg-background/50">
-                    <td className="p-2 text-sm text-text">
-                      <div className="font-medium">{club.name}</div>
-                      {club.email && (
-                        <div className="text-xs text-text-secondary flex items-center gap-1 mt-0.5">
-                          {club.email}
-                          {club.isGoogleAuth && (
-                            <span className="px-1.5 py-0.5 bg-blue-100 text-blue-700 text-[10px] rounded-full font-medium">
-                              Google
-                            </span>
-                          )}
-                        </div>
-                      )}
-                    </td>
-                    <td className="p-2 text-sm text-text-secondary">{formatCurrency(club.baseAmount)}</td>
-                    <td className="p-2 text-sm text-text-secondary">{formatCurrency(club.addonAmount)}</td>
-                    <td className="p-2 text-sm font-semibold text-text">{formatCurrency(club.total)}</td>
-                  </tr>
-                ))}
-              </tbody>
-            </table>
-          ) : (
-            <p className="text-center text-text-secondary">No hay clubes contribuyendo al MRR.</p>
-          )}
+    <motion.li
+      initial={{ opacity: 0, y: 8 }}
+      animate={{ opacity: 1, y: 0 }}
+      transition={{ duration: 0.25, delay: index * 0.03 }}
+    >
+      <Link
+        to={`/clubs/${club.id}`}
+        onClick={onNavigate}
+        className="group grid grid-cols-[1fr_auto] items-center gap-x-3 gap-y-2 rounded-2xl border border-border/70 bg-surface p-4 transition hover:border-primary/40 hover:shadow-md md:grid-cols-[minmax(0,2fr)_minmax(0,1.3fr)_repeat(3,minmax(0,1fr))_auto] md:gap-4"
+      >
+        {/* Club */}
+        <div className="flex min-w-0 items-start gap-2.5">
+          <span className="mt-0.5 flex h-6 min-w-6 shrink-0 items-center justify-center rounded-full bg-bg px-1.5 text-[11px] font-bold text-text-secondary">
+            {rank}
+          </span>
+          <div className="min-w-0">
+          <p className="truncate font-semibold text-text group-hover:text-primary-hover">{club.name}</p>
+          <div className="mt-0.5 flex min-w-0 items-center gap-1.5 text-xs text-text-secondary">
+            <span className="truncate">{club.email ?? 'Sin correo'}</span>
+            {club.isGoogleAuth && <Badge tone="info">Google</Badge>}
+          </div>
+          </div>
         </div>
 
-        {meta && meta.totalPages > 1 && (
-          <div className="flex justify-between items-center p-4 border-t border-border">
-            <button 
-              disabled={page === 1} 
-              onClick={() => setPage(page - 1)}
-              className="px-3 py-1 bg-gray-100 text-sm rounded disabled:opacity-50"
-            >
-              Anterior
-            </button>
-            <span className="text-sm text-text-secondary">Página {meta.page} de {meta.totalPages}</span>
-            <button 
-              disabled={page === meta.totalPages} 
-              onClick={() => setPage(page + 1)}
-              className="px-3 py-1 bg-gray-100 text-sm rounded disabled:opacity-50"
-            >
-              Siguiente
-            </button>
-          </div>
-        )}
-      </div>
-    </div>
+        {/* Total (en celular va arriba a la derecha) */}
+        <div className="text-right md:order-last md:hidden">
+          <p className="text-base font-bold text-text">{formatCurrency(club.total, club.currency)}</p>
+          <p className="text-[11px] text-text-secondary">/ mes</p>
+        </div>
+
+        {/* Deportistas */}
+        <div className="col-span-2 flex flex-wrap items-center gap-2 md:col-span-1">
+          <span className="inline-flex items-center gap-1.5 text-sm text-text">
+            <Users size={14} className="text-text-secondary" />
+            <span className="font-semibold">{club.billablePlayers}</span>
+            <span className="text-text-secondary">deportistas</span>
+          </span>
+          <PackChange club={club} />
+          <p className="w-full text-[11px] text-text-secondary">
+            {included > 0 ? `${included} incluidos` : 'Ilimitado'}
+            {packs > 0 && ` + ${packs} pack${packs > 1 ? 's' : ''} de 10`}
+          </p>
+        </div>
+
+        {/* Montos (escritorio) */}
+        <div className="hidden text-sm md:block">
+          <p className="text-[11px] text-text-secondary">Plan</p>
+          <p className="font-medium text-text">{formatCurrency(club.baseAmount, club.currency)}</p>
+        </div>
+        <div className="hidden text-sm md:block">
+          <p className="text-[11px] text-text-secondary">Packs</p>
+          <p className="font-medium text-text">{formatCurrency(club.addonAmount, club.currency)}</p>
+        </div>
+        <div className="hidden text-sm md:block">
+          <p className="text-[11px] text-text-secondary">Total / mes</p>
+          <p className="font-bold text-text">{formatCurrency(club.total, club.currency)}</p>
+        </div>
+
+        {/* Montos (celular) */}
+        <p className="col-span-2 text-xs text-text-secondary md:hidden">
+          Plan {formatCurrency(club.baseAmount, club.currency)} · Packs {formatCurrency(club.addonAmount, club.currency)}
+        </p>
+
+        <ChevronRight size={18} className="hidden text-text-secondary/50 transition group-hover:translate-x-0.5 group-hover:text-primary md:block" />
+      </Link>
+    </motion.li>
+  );
+}
+
+export function MrrDetailsModal({ open, onClose, mrr, currency }: MrrDetailsModalProps) {
+  const [page, setPage] = useState(1);
+  const { data, isLoading } = useMrrClubs(page, open);
+  const clubs = data?.data ?? [];
+
+  return (
+    <Modal
+      open={open}
+      onClose={onClose}
+      size="xl"
+      title="¿De dónde sale el MRR esperado?"
+      description={
+        <>
+          {formatCurrency(mrr, currency)} al mes entre {data?.total ?? '…'} clubes al día, del que más paga al que
+          menos. Toca un club para ver su detalle.
+        </>
+      }
+      header={
+        <div className="flex gap-3 rounded-2xl bg-primary-light/70 p-3.5 text-sm text-text">
+          <Info size={18} className="mt-0.5 shrink-0 text-primary-hover" />
+          <p className="leading-relaxed">
+            <span className="font-semibold">Cómo se calcula:</span> plan PRO (incluye 30 deportistas) + un pack por
+            cada 10 deportistas extra, con los activos y suspendidos de <span className="font-semibold">hoy</span>.
+            Si un club creció desde su último pago, verás el cambio de packs marcado.
+          </p>
+        </div>
+      }
+      footer={<Pagination page={page} lastPage={data?.lastPage ?? 1} total={data?.total} itemLabel="clubes" onChange={setPage} />}
+    >
+      {isLoading ? (
+        <ul className="space-y-2">
+          {Array.from({ length: 5 }).map((_, i) => (
+            <li key={i} className="h-20 animate-pulse rounded-2xl bg-bg" />
+          ))}
+        </ul>
+      ) : clubs.length === 0 ? (
+        <p className="py-10 text-center text-sm text-text-secondary">Todavía no hay clubes pagando.</p>
+      ) : (
+        <ul className="space-y-2">
+          {clubs.map((club, i) => (
+            <ClubRow key={club.id} club={club} index={i} rank={(page - 1) * 10 + i + 1} onNavigate={onClose} />
+          ))}
+        </ul>
+      )}
+    </Modal>
   );
 }

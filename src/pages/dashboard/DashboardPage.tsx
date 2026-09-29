@@ -1,24 +1,41 @@
 import { useState } from 'react';
+import { Link } from 'react-router-dom';
+import { motion } from 'framer-motion';
+import { Users, Building2, Activity, UserMinus, Wallet, CalendarRange, ArrowUpRight, ArrowDownRight, ChevronRight, ShieldAlert, FlaskConical } from 'lucide-react';
 import { useDashboardStats } from './hooks/useDashboardStats';
-import { formatCurrency } from '@/lib/utils';
-import { Users, Building2, TrendingUp, DollarSign, Activity, UserMinus } from 'lucide-react';
+import { formatCurrency, formatNumber } from '@/lib/format';
+import { StatCard, SectionTitle } from '@/components/ui/Card';
 import { DashboardAlerts } from './components/DashboardAlerts';
 import { DashboardCharts } from './components/DashboardCharts';
 import { MrrDetailsModal } from './components/MrrDetailsModal';
 import { ChurnDetailsModal } from './components/ChurnDetailsModal';
 
+function DeltaPill({ current, previous }: { current: number; previous: number }) {
+  if (!previous) return null;
+  const delta = ((current - previous) / previous) * 100;
+  const up = delta >= 0;
+  return (
+    <span className={`inline-flex items-center gap-0.5 rounded-full px-1.5 py-0.5 text-[11px] font-semibold ${up ? 'bg-emerald-50 text-emerald-700' : 'bg-rose-50 text-rose-700'}`}>
+      {up ? <ArrowUpRight size={12} /> : <ArrowDownRight size={12} />}
+      {Math.abs(delta).toFixed(0)}%
+    </span>
+  );
+}
+
 export function DashboardPage() {
   const [showMrrModal, setShowMrrModal] = useState(false);
   const [showChurnModal, setShowChurnModal] = useState(false);
-
   const { data: stats, isLoading, isError, error } = useDashboardStats();
 
   if (isLoading) {
     return (
-      <div className="flex h-[50vh] items-center justify-center">
-        <div className="text-center">
-          <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-primary mx-auto mb-4"></div>
-          <p className="text-gray-500">Cargando estadísticas globales...</p>
+      <div className="space-y-4">
+        <div className="h-8 w-48 animate-pulse rounded-lg bg-border/60" />
+        <div className="h-52 animate-pulse rounded-3xl bg-border/60" />
+        <div className="grid grid-cols-2 gap-3 lg:grid-cols-4">
+          {Array.from({ length: 4 }).map((_, i) => (
+            <div key={i} className="h-28 animate-pulse rounded-2xl bg-border/60" />
+          ))}
         </div>
       </div>
     );
@@ -26,176 +43,167 @@ export function DashboardPage() {
 
   if (isError || !stats) {
     return (
-      <div className="bg-red-50 p-6 rounded-lg text-center">
-        <p className="text-red-600 font-medium text-lg">Error al cargar las estadísticas</p>
-        <p className="text-red-500 mt-2">{error?.message || 'Error desconocido'}</p>
+      <div className="rounded-2xl bg-rose-50 p-6 text-center">
+        <p className="text-lg font-medium text-rose-700">Error al cargar las estadísticas</p>
+        <p className="mt-2 text-rose-600">{error?.message || 'Error desconocido'}</p>
       </div>
     );
   }
 
   const { kpis, distributions, alerts } = stats;
-  const totalClubs = kpis.totalClubsByStatus.ACTIVE + kpis.totalClubsByStatus.TRIAL + kpis.totalClubsByStatus.PAST_DUE + kpis.totalClubsByStatus.SUSPENDED;
+  const s = kpis.totalClubsByStatus;
+  const totalClubs = s.ACTIVE + s.TRIAL + s.PAST_DUE + s.SUSPENDED;
+  const currency = kpis.mrrCurrency ?? 'COP';
+  const payingClubs = kpis.payingClubs ?? s.ACTIVE;
+  const mrrAtRisk = kpis.mrrAtRisk ?? 0;
 
   return (
-    <div className="space-y-6">
-      <div className="flex justify-between items-center mb-6">
-        <h1 className="text-2xl font-bold text-text">Dashboard Global (SaaS)</h1>
+    <div className="space-y-8">
+      <div>
+        <h1 className="text-2xl font-bold tracking-tight text-text">Dashboard</h1>
+        <p className="mt-0.5 text-sm text-text-secondary">Así va la plataforma hoy.</p>
       </div>
 
-      {/* Alertas Críticas (Top Widgets) */}
-      <DashboardAlerts alerts={alerts} />
+      {/* MRR esperado: la métrica principal, explicada en la misma tarjeta */}
+      <motion.section
+        initial={{ opacity: 0, y: 12 }}
+        animate={{ opacity: 1, y: 0 }}
+        transition={{ duration: 0.4, ease: 'easeOut' }}
+        className="relative overflow-hidden rounded-3xl bg-sidebar p-5 text-white shadow-xl shadow-sidebar/20 sm:p-7"
+      >
+        <div className="pointer-events-none absolute -right-20 -top-24 h-72 w-72 rounded-full bg-primary/30 blur-3xl" />
+        <div className="pointer-events-none absolute -bottom-24 left-1/3 h-64 w-64 rounded-full bg-secondary/20 blur-3xl" />
 
-      {/* Fila 1: KPIs de Volumen e Impacto */}
-      <h2 className="text-lg font-bold text-text mb-4 mt-8 border-b border-border pb-2">Crecimiento e Impacto</h2>
-      <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6">
-        
-        {/* Total Jugadores */}
-        <div className="bg-white p-6 rounded-lg shadow-sm border border-border">
-          <div className="flex items-center justify-between">
-            <div>
-              <p className="text-sm font-medium text-text-secondary">Jugadores en la Plataforma</p>
-              <p className="text-2xl font-bold text-text mt-1">{kpis.totalPlayers.toLocaleString()}</p>
-            </div>
-            <div className="bg-blue-50 p-3 rounded-full">
-              <Users className="text-blue-500" size={24} />
-            </div>
+        <div className="relative flex flex-col gap-6 lg:flex-row lg:items-end lg:justify-between">
+          <div className="max-w-xl">
+            <p className="text-[11px] font-bold uppercase tracking-[0.18em] text-primary">MRR esperado</p>
+            <p className="mt-2 text-4xl font-black tracking-tight sm:text-5xl">
+              {formatCurrency(kpis.mrr, currency)}
+              <span className="ml-1 text-base font-semibold text-white/50">/ mes</span>
+            </p>
+            <p className="mt-3 text-sm leading-relaxed text-white/70">
+              Lo que suman al mes los clubes al día: su plan PRO más los packs que necesitan según los deportistas
+              que tienen hoy. Si un club crece, su pack extra ya cuenta aquí.
+            </p>
           </div>
-          <p className="text-xs text-text-secondary mt-4">
-            <span className="font-semibold text-text">+{kpis.newPlayersThisMonth}</span> registrados este mes
-          </p>
+
+          <button
+            onClick={() => setShowMrrModal(true)}
+            className="group inline-flex items-center justify-center gap-2 rounded-2xl bg-primary px-5 py-3 text-sm font-bold text-sidebar shadow-lg shadow-primary/30 transition hover:bg-primary-hover active:scale-[0.98]"
+          >
+            Ver club por club
+            <ChevronRight size={18} className="transition-transform group-hover:translate-x-0.5" />
+          </button>
         </div>
 
-        {/* Clubes Registrados */}
-        <div className="bg-white p-6 rounded-lg shadow-sm border border-border">
-          <div className="flex items-center justify-between">
-            <div>
-              <p className="text-sm font-medium text-text-secondary">Clubes Totales (Histórico)</p>
-              <p className="text-2xl font-bold text-text mt-1">{totalClubs}</p>
-            </div>
-            <div className="bg-indigo-50 p-3 rounded-full">
-              <Building2 className="text-indigo-500" size={24} />
-            </div>
+        <div className="relative mt-6 grid grid-cols-2 gap-3 sm:grid-cols-3">
+          <div className="rounded-2xl bg-white/5 p-3.5 ring-1 ring-white/10">
+            <p className="text-xs text-white/60">Clubes pagando</p>
+            <p className="mt-1 text-xl font-bold">{formatNumber(payingClubs)}</p>
           </div>
-          <div className="flex items-center justify-between mt-4 text-xs text-text-secondary">
-            <span>YTD: <span className="font-semibold text-text">+{kpis.newClubsYtd}</span></span>
-            <span>Mes: <span className="font-semibold text-text">+{kpis.newClubsThisMonth}</span></span>
+          <div className="rounded-2xl bg-white/5 p-3.5 ring-1 ring-white/10">
+            <p className="text-xs text-white/60">Promedio por club</p>
+            <p className="mt-1 text-xl font-bold">{formatCurrency(kpis.arpu, currency)}</p>
+          </div>
+          <div className="col-span-2 rounded-2xl bg-amber-400/10 p-3.5 ring-1 ring-amber-300/20 sm:col-span-1">
+            <p className="flex items-center gap-1.5 text-xs text-amber-200">
+              <ShieldAlert size={13} /> En riesgo · {formatNumber(alerts.pastDueClubs)} en gracia
+            </p>
+            <p className="mt-1 text-xl font-bold text-amber-100">{formatCurrency(mrrAtRisk, currency)}</p>
           </div>
         </div>
+      </motion.section>
 
-        {/* Clubes Activos */}
-        <div className="bg-white p-6 rounded-lg shadow-sm border border-border">
-          <div className="flex items-center justify-between">
-            <div>
-              <p className="text-sm font-medium text-text-secondary">Clubes Activos (Pagando)</p>
-              <p className="text-2xl font-bold text-text mt-1">{kpis.totalClubsByStatus.ACTIVE}</p>
-            </div>
-            <div className="bg-green-50 p-3 rounded-full">
-              <Activity className="text-green-500" size={24} />
-            </div>
-          </div>
-          <p className="text-xs text-text-secondary mt-4">
-            Tasa de Conversión: <span className="font-semibold text-text">{kpis.conversionRate}%</span>
-          </p>
-        </div>
-
-        {/* Churn Rate */}
-        <div 
-          className="bg-white p-6 rounded-lg shadow-sm border border-border cursor-pointer hover:shadow-md transition-shadow"
-          onClick={() => setShowChurnModal(true)}
+      {stats.internal && stats.internal.clubs > 0 && (
+        <Link
+          to="/clubs?internal=only"
+          className="group -mt-4 flex items-center gap-3 rounded-2xl bg-violet-50 px-4 py-3 text-sm text-violet-900 ring-1 ring-inset ring-violet-200 transition hover:shadow-md"
         >
-          <div className="flex items-center justify-between">
-            <div>
-              <p className="text-sm font-medium text-text-secondary">Churn Rate (Bajas Mes)</p>
-              <p className="text-2xl font-bold text-text mt-1">{kpis.churnRate}%</p>
-            </div>
-            <div className="bg-red-50 p-3 rounded-full">
-              <UserMinus className="text-red-500" size={24} />
-            </div>
-          </div>
-          <p className="text-xs text-text-secondary mt-4">
-            Click para ver detalle ({'>'} 15 días sin pago)
-          </p>
-        </div>
-      </div>
+          <FlaskConical size={18} className="shrink-0 text-violet-600" />
+          <span className="min-w-0 flex-1">
+            <b>{stats.internal.clubs} club{stats.internal.clubs > 1 ? 'es' : ''} tuyo{stats.internal.clubs > 1 ? 's' : ''}</b> cobraron{' '}
+            {formatCurrency(stats.internal.revenueThisMonth, currency)} este mes. No cuentan en ninguna cifra de aquí.
+          </span>
+          <ChevronRight size={16} className="shrink-0 opacity-50 transition group-hover:translate-x-0.5" />
+        </Link>
+      )}
 
-      {/* Fila 2: KPIs Financieros (SaaS) */}
-      <h2 className="text-lg font-bold text-text mb-4 mt-8 border-b border-border pb-2">Métricas Financieras</h2>
-      <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6">
-        
-        {/* MRR */}
-        <div 
-          className="bg-white p-6 rounded-lg shadow-sm border border-border cursor-pointer hover:shadow-md transition-shadow"
-          onClick={() => setShowMrrModal(true)}
-        >
-          <div className="flex items-center justify-between">
-            <div>
-              <p className="text-sm font-medium text-text-secondary">MRR Esperado</p>
-              <p className="text-2xl font-bold text-text mt-1">{formatCurrency(kpis.mrr)}</p>
-            </div>
-            <div className="bg-primary-light p-3 rounded-full">
-              <TrendingUp className="text-primary" size={24} />
-            </div>
-          </div>
-          <p className="text-xs text-text-secondary mt-4">
-            Ingreso Recurrente Mensual
-          </p>
-        </div>
+      <section>
+        <SectionTitle>Requiere atención</SectionTitle>
+        <DashboardAlerts alerts={alerts} />
+      </section>
 
-        {/* ARPU */}
-        <div className="bg-white p-6 rounded-lg shadow-sm border border-border">
-          <div className="flex items-center justify-between">
-            <div>
-              <p className="text-sm font-medium text-text-secondary">ARPU Promedio</p>
-              <p className="text-2xl font-bold text-text mt-1">{formatCurrency(kpis.arpu)}</p>
-            </div>
-            <div className="bg-purple-50 p-3 rounded-full">
-              <DollarSign className="text-purple-600" size={24} />
-            </div>
-          </div>
-          <p className="text-xs text-text-secondary mt-4">
-            Promedio generado por club activo
-          </p>
+      <section>
+        <SectionTitle>Crecimiento</SectionTitle>
+        <div className="grid grid-cols-2 gap-3 lg:grid-cols-4 lg:gap-4">
+          <StatCard
+            index={0}
+            label="Deportistas"
+            value={formatNumber(kpis.totalPlayers)}
+            hint={<><span className="font-semibold text-text">+{formatNumber(kpis.newPlayersThisMonth)}</span> este mes</>}
+            icon={<Users size={18} />}
+            accent="sky"
+          />
+          <StatCard
+            index={1}
+            label="Clubes registrados"
+            value={formatNumber(totalClubs)}
+            hint={<>+{kpis.newClubsThisMonth} este mes · +{kpis.newClubsYtd} en el año</>}
+            icon={<Building2 size={18} />}
+            accent="violet"
+          />
+          <StatCard
+            index={2}
+            label="Clubes activos"
+            value={formatNumber(s.ACTIVE)}
+            hint={<>Conversión <span className="font-semibold text-text">{kpis.conversionRate}%</span> · {s.TRIAL} en prueba</>}
+            icon={<Activity size={18} />}
+            accent="emerald"
+          />
+          <StatCard
+            index={3}
+            label="Churn del mes"
+            value={`${kpis.churnRate}%`}
+            hint="Suspendidos hace más de 15 días"
+            icon={<UserMinus size={18} />}
+            accent="rose"
+            onClick={() => setShowChurnModal(true)}
+            actionLabel="Ver clubes"
+          />
         </div>
+      </section>
 
-        {/* Ingresos del Mes */}
-        <div className="bg-white p-6 rounded-lg shadow-sm border border-border">
-          <div className="flex items-center justify-between">
-            <div>
-              <p className="text-sm font-medium text-text-secondary">Recaudado este Mes</p>
-              <p className="text-2xl font-bold text-text mt-1">{formatCurrency(kpis.revenueThisMonth)}</p>
-            </div>
-            <div className="bg-emerald-50 p-3 rounded-full">
-              <DollarSign className="text-emerald-600" size={24} />
-            </div>
-          </div>
-          <p className="text-xs text-text-secondary mt-4">
-            Mes anterior: <span className="font-semibold">{formatCurrency(kpis.revenuePreviousMonth)}</span>
-          </p>
+      <section>
+        <SectionTitle>Recaudo real</SectionTitle>
+        <div className="grid grid-cols-1 gap-3 sm:grid-cols-2 lg:gap-4">
+          <StatCard
+            index={0}
+            label="Recaudado este mes"
+            value={formatCurrency(kpis.revenueThisMonth, currency)}
+            hint={
+              <span className="flex flex-wrap items-center gap-1.5">
+                Mes anterior {formatCurrency(kpis.revenuePreviousMonth, currency)}
+                <DeltaPill current={kpis.revenueThisMonth} previous={kpis.revenuePreviousMonth} />
+              </span>
+            }
+            icon={<Wallet size={18} />}
+            accent="emerald"
+          />
+          <StatCard
+            index={1}
+            label="Recaudado en el año"
+            value={formatCurrency(kpis.revenueYtd, currency)}
+            hint="Desde el 1 de enero"
+            icon={<CalendarRange size={18} />}
+            accent="primary"
+          />
         </div>
+      </section>
 
-        {/* Ingresos YTD */}
-        <div className="bg-white p-6 rounded-lg shadow-sm border border-border">
-          <div className="flex items-center justify-between">
-            <div>
-              <p className="text-sm font-medium text-text-secondary">Recaudado YTD (Año)</p>
-              <p className="text-2xl font-bold text-text mt-1">{formatCurrency(kpis.revenueYtd)}</p>
-            </div>
-            <div className="bg-emerald-50 p-3 rounded-full">
-              <DollarSign className="text-emerald-600" size={24} />
-            </div>
-          </div>
-          <p className="text-xs text-text-secondary mt-4">
-            Desde el 1 de enero
-          </p>
-        </div>
-      </div>
-
-      {/* Gráficos de Distribución */}
       <DashboardCharts distributions={distributions} />
 
-      {/* Modals */}
-      {showMrrModal && <MrrDetailsModal onClose={() => setShowMrrModal(false)} />}
-      {showChurnModal && <ChurnDetailsModal onClose={() => setShowChurnModal(false)} />}
+      <MrrDetailsModal open={showMrrModal} onClose={() => setShowMrrModal(false)} mrr={kpis.mrr} currency={currency} />
+      <ChurnDetailsModal open={showChurnModal} onClose={() => setShowChurnModal(false)} />
     </div>
   );
 }

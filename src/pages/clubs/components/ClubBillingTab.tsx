@@ -1,322 +1,350 @@
-import { useState } from 'react';
-import { CreditCard, Calendar, Gift, Settings, ArrowRightLeft, CheckCircle2, History, XCircle, AlertTriangle, Clock, Check, Undo, PlayCircle } from 'lucide-react';
-import { format } from 'date-fns';
-import { es } from 'date-fns/locale';
-import { useClubPayments, useSubscriptionActions } from '../../subscriptions/hooks/useSubscriptions';
+import { useState, type ReactNode } from 'react';
 import { Link } from 'react-router-dom';
+import { useQueryClient } from '@tanstack/react-query';
+import { toast } from 'sonner';
+import { CreditCard, Gift, ArrowRightLeft, PlayCircle, XCircle, CheckCircle2, Check, Undo2, ChevronRight, Receipt } from 'lucide-react';
+import { useClubPayments, useSubscriptionActions } from '../../subscriptions/hooks/useSubscriptions';
 import { ExtendSubscriptionModal } from '../../subscriptions/components/modals/ExtendSubscriptionModal';
 import { AssignAddOnModal } from './AssignAddOnModal';
+import { StatusBadge } from '@/components/ui/Badge';
+import { EmptyState, SectionTitle } from '@/components/ui/Card';
+import { InfoList, InfoRow } from '@/components/ui/InfoRow';
+import { ConfirmDialog } from '@/components/ui/ConfirmDialog';
+import { BILLING_METHOD, BILLING_STATUS, PAYMENT_STATUS } from '@/lib/status';
+import { formatCurrency, formatDate, formatDateTime, formatPeriod, formatRelative } from '@/lib/format';
+import { cn } from '@/lib/utils';
+import { getErrorMessage } from '@/lib/errors';
+import type { ClubDetail } from '@/services/clubs/clubs.types';
 
 interface ClubBillingTabProps {
-  club: any;
+  club: ClubDetail;
+}
+
+type Dialog =
+  | { type: 'extend' }
+  | { type: 'addons' }
+  | { type: 'trial' }
+  | { type: 'cancelProfile' }
+  | { type: 'approve'; paymentId: string }
+  | { type: 'revert'; paymentId: string }
+  | null;
+
+
+function ActionTile({
+  icon,
+  title,
+  description,
+  accent,
+  onClick,
+  to,
+  danger,
+}: {
+  icon: ReactNode;
+  title: string;
+  description: string;
+  accent: string;
+  onClick?: () => void;
+  to?: string;
+  danger?: boolean;
+}) {
+  const cls = cn(
+    'group flex w-full items-center gap-3 rounded-2xl border bg-surface p-4 text-left transition hover:shadow-md active:scale-[0.99]',
+    danger ? 'border-rose-200 hover:border-rose-300' : 'border-border/70 hover:border-primary/40',
+  );
+  const content = (
+    <>
+      <div className={cn('flex h-10 w-10 shrink-0 items-center justify-center rounded-xl', accent)}>{icon}</div>
+      <div className="min-w-0 flex-1">
+        <p className={cn('text-sm font-semibold', danger ? 'text-rose-600' : 'text-text')}>{title}</p>
+        <p className="text-xs text-text-secondary">{description}</p>
+      </div>
+      <ChevronRight size={16} className="shrink-0 text-text-secondary/40 transition group-hover:translate-x-0.5" />
+    </>
+  );
+  return to ? (
+    <Link to={to} className={cls}>
+      {content}
+    </Link>
+  ) : (
+    <button onClick={onClick} className={cls}>
+      {content}
+    </button>
+  );
 }
 
 export function ClubBillingTab({ club }: ClubBillingTabProps) {
-  const [activeModal, setActiveModal] = useState<'payment' | 'extend' | 'addons' | null>(null);
+  const queryClient = useQueryClient();
+  const [dialog, setDialog] = useState<Dialog>(null);
+  const [trialDays, setTrialDays] = useState('30');
+  const [revertReason, setRevertReason] = useState('');
   const { data: payments, isLoading: paymentsLoading } = useClubPayments(club.id);
   const { cancelSubscription, approveTransaction, revertPayment, assignTrial } = useSubscriptionActions();
 
-  const formatCurrency = (amount?: number | null, currency = 'COP') => {
-    if (!amount && amount !== 0) return 'N/A';
-    return new Intl.NumberFormat('es-CO', { style: 'currency', currency, maximumFractionDigits: 0 }).format(Number(amount));
-  };
+  const currency = club.subscriptionPrice?.currency ?? 'COP';
+  const base = Number(club.currentBaseAmount) || 0;
+  const addons = Number(club.currentAddonAmount) || 0;
+  const recentPayments = payments?.data?.slice(0, 5) ?? [];
 
-  const formatDate = (dateString?: string | null) => {
-    if (!dateString) return 'N/A';
-    return format(new Date(dateString), "d 'de' MMMM, yyyy", { locale: es });
+  // El detalle del club y sus pagos también deben refrescarse
+  const refreshClub = () => {
+    queryClient.invalidateQueries({ queryKey: ['clubs'] });
+    queryClient.invalidateQueries({ queryKey: ['clubPayments', club.id] });
   };
-
-  const handleCancelPaymentProfile = () => {
-    if (confirm('¿Estás seguro de desactivar el método de pago guardado en Wompi? El club deberá pagar manualmente su próximo ciclo.')) {
-      cancelSubscription.mutate({ clubId: club.id });
-    }
-  };
-
-  // Últimas 3 facturas
-  const recentPayments = payments?.data?.slice(0, 3) || [];
+  const handlers = (msg: string) => ({
+    onSuccess: () => {
+      toast.success(msg);
+      refreshClub();
+      setDialog(null);
+    },
+    onError: (e: unknown) => toast.error(getErrorMessage(e, 'No se pudo completar la acción')),
+  });
 
   return (
     <div className="space-y-8">
-      {/* Información y Acciones */}
-      <div className="grid grid-cols-1 lg:grid-cols-2 gap-8">
-        
-        {/* Columna Izquierda: Información Actual */}
+      <div className="grid grid-cols-1 gap-6 lg:grid-cols-2">
         <div className="space-y-6">
-          <div className="space-y-1">
-            <h3 className="text-base font-bold text-text flex items-center gap-2 mb-4">
-              <CreditCard size={17} className="text-primary" /> Datos de Suscripción
-            </h3>
-            <div className="bg-surface rounded-xl border border-border overflow-hidden">
-              {[
-                { label: 'Estado de Facturación', value: club.billingStatus },
-                { label: 'Método de Pago', value: club.billingMethod ?? 'N/A' },
-                { label: 'Monto Base', value: formatCurrency(club.currentBaseAmount, club.subscriptionPrice?.currency) },
-                { label: 'Monto AddOns', value: formatCurrency(club.currentAddonAmount, club.subscriptionPrice?.currency) },
-                { label: 'Total Estimado', value: formatCurrency((Number(club.currentBaseAmount) || 0) + (Number(club.currentAddonAmount) || 0), club.subscriptionPrice?.currency) },
-              ].map((row, i) => (
-                <div key={row.label} className={`flex justify-between items-center px-4 py-3 ${i !== 0 ? 'border-t border-border/50' : ''}`}>
-                  <span className="text-sm text-text-secondary">{row.label}</span>
-                  <span className="text-sm font-medium text-text">{row.value}</span>
-                </div>
-              ))}
-            </div>
+          <div>
+            <SectionTitle>Lo que paga</SectionTitle>
+            <InfoList>
+              <InfoRow label="Estado" value={<StatusBadge map={BILLING_STATUS} value={club.billingStatus} />} />
+              <InfoRow label="Plan" value={formatCurrency(base, currency)} sub="por mes" />
+              <InfoRow label="Packs y extras" value={formatCurrency(addons, currency)} sub="por mes" />
+              <InfoRow
+                label={<span className="font-semibold text-text">Total del mes</span>}
+                value={<span className="text-base font-bold">{formatCurrency(base + addons, currency)}</span>}
+                sub="Se recalcula con los deportistas al pagar"
+                className="bg-bg/60"
+              />
+            </InfoList>
           </div>
 
-          <div className="space-y-1">
-            <h3 className="text-base font-bold text-text flex items-center gap-2 mb-4">
-              <Calendar size={17} className="text-primary" /> Fechas Importantes
-            </h3>
-            <div className="bg-surface rounded-xl border border-border overflow-hidden">
-              {[
-                {
-                  label: club.billingMethod === 'CARD' ? 'Próximo Pago' : 'Vencimiento del Plan',
-                  value: formatDate(club.billingMethod === 'CARD' ? club.nextChargeDate : (club.subscriptionEnd || club.nextChargeDate))
-                },
-                { 
-                  label: 'Último Pago Registrado', 
-                  value: formatDate(club.lastChargeAt || club.subscriptionStart) 
-                },
-              ].map((row, i) => (
-                <div key={row.label} className={`flex justify-between items-center px-4 py-3 ${i !== 0 ? 'border-t border-border/50' : ''}`}>
-                  <span className="text-sm text-text-secondary">{row.label}</span>
-                  <span className="text-sm font-medium text-text">{row.value}</span>
-                </div>
-              ))}
-            </div>
+          <div>
+            <SectionTitle>Fechas</SectionTitle>
+            <InfoList>
+              <InfoRow
+                label="Mes pagado hasta"
+                value={formatDate(club.subscriptionEnd)}
+                sub={club.subscriptionEnd ? formatRelative(club.subscriptionEnd) : undefined}
+              />
+              <InfoRow
+                label="Último pago"
+                value={club.lastChargeAt ? formatDate(club.lastChargeAt) : 'Sin pagos'}
+                sub={club.lastChargeAt ? formatRelative(club.lastChargeAt) : undefined}
+              />
+              <InfoRow label="Método" value={BILLING_METHOD[club.billingMethod] ?? club.billingMethod ?? '—'} />
+              {club.gracePeriodEndsAt && club.status === 'PAST_DUE' && (
+                <InfoRow label="Gracia hasta" value={formatDate(club.gracePeriodEndsAt)} sub={formatRelative(club.gracePeriodEndsAt)} />
+              )}
+            </InfoList>
           </div>
         </div>
 
-        {/* Columna Derecha: Acciones Rápidas */}
         <div>
-          <h3 className="text-base font-bold text-text flex items-center gap-2 mb-4">
-            <Settings size={17} className="text-primary" /> Acciones Rápidas
-          </h3>
-          <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
-            
-            {/* Acción 1: Renovar / Registrar Pago */}
-            <Link 
+          <SectionTitle>Acciones</SectionTitle>
+          <div className="space-y-2.5">
+            <ActionTile
               to={`/clubs/${club.id}/register-payment`}
-              className="flex flex-col items-start p-4 bg-white rounded-xl border border-border shadow-sm hover:shadow-md hover:border-primary/50 transition-all text-left group"
-            >
-              <div className="p-2 bg-green-50 text-green-600 rounded-lg mb-3 group-hover:scale-110 transition-transform">
-                <CreditCard size={20} />
-              </div>
-              <h4 className="font-bold text-text text-sm mb-1">Registrar Pago / Renovar</h4>
-              <p className="text-xs text-text-secondary">Renovar ciclo, ajustar addons y reportar pago recibido.</p>
-            </Link>
-
-            {/* Acción 2: Modificar AddOns sin pago */}
-            <button 
-              onClick={() => setActiveModal('addons')}
-              className="flex flex-col items-start p-4 bg-white rounded-xl border border-border shadow-sm hover:shadow-md hover:border-blue-500/50 transition-all text-left group"
-            >
-              <div className="p-2 bg-blue-50 text-blue-600 rounded-lg mb-3 group-hover:scale-110 transition-transform">
-                <ArrowRightLeft size={20} />
-              </div>
-              <h4 className="font-bold text-text text-sm mb-1">Ajustar Capacidad (AddOns)</h4>
-              <p className="text-xs text-text-secondary">Bajar o subir paquetes sin generar cobro inmediato.</p>
-            </button>
-
-            {/* Acción 3: Extender Suscripción / Trial */}
-            <button 
-              onClick={() => setActiveModal('extend')}
-              className="flex flex-col items-start p-4 bg-white rounded-xl border border-border shadow-sm hover:shadow-md hover:border-purple-500/50 transition-all text-left group"
-            >
-              <div className="p-2 bg-purple-50 text-purple-600 rounded-lg mb-3 group-hover:scale-110 transition-transform">
-                <Gift size={20} />
-              </div>
-              <h4 className="font-bold text-text text-sm mb-1">
-                {club.status === 'TRIAL' ? 'Extender Trial' : 'Extender Suscripción'}
-              </h4>
-              <p className="text-xs text-text-secondary">
-                {club.status === 'TRIAL' ? 'Regalar días adicionales de prueba gratuita.' : 'Regalar días o meses adicionales por cortesía.'}
-              </p>
-            </button>
-
-            {/* Acción 4: Asignar Trial Nuevo */}
-            <button 
-              onClick={() => {
-                const daysStr = prompt('¿Cuántos días de Trial deseas asignar?', '30');
-                if (daysStr) {
-                  const days = parseInt(daysStr, 10);
-                  if (!isNaN(days) && days > 0) {
-                    assignTrial.mutate({ clubId: club.id, data: { days, reason: 'Asignado manualmente por admin' } });
-                  }
-                }
-              }}
-              disabled={assignTrial.isPending}
-              className="flex flex-col items-start p-4 bg-white rounded-xl border border-border shadow-sm hover:shadow-md hover:border-amber-500/50 transition-all text-left group"
-            >
-              <div className="p-2 bg-amber-50 text-amber-600 rounded-lg mb-3 group-hover:scale-110 transition-transform">
-                <PlayCircle size={20} />
-              </div>
-              <h4 className="font-bold text-text text-sm mb-1">Asignar Trial</h4>
-              <p className="text-xs text-text-secondary">Reactiva el club otorgándole días gratuitos.</p>
-            </button>
-
-            {/* Acción 4: Desactivar método de pago guardado */}
+              icon={<CreditCard size={18} />}
+              accent="bg-primary-light text-primary-hover"
+              title="Registrar pago"
+              description="Pago por transferencia, efectivo u otro medio."
+            />
+            <ActionTile
+              onClick={() => setDialog({ type: 'addons' })}
+              icon={<ArrowRightLeft size={18} />}
+              accent="bg-sky-50 text-sky-600"
+              title="Ajustar packs"
+              description="Subir o bajar paquetes sin cobrar ahora."
+            />
+            <ActionTile
+              onClick={() => setDialog({ type: 'extend' })}
+              icon={<Gift size={18} />}
+              accent="bg-violet-50 text-violet-600"
+              title={club.status === 'TRIAL' ? 'Extender prueba' : 'Regalar días'}
+              description={club.status === 'TRIAL' ? 'Más días de prueba gratis.' : 'Días de cortesía sin cobro.'}
+            />
+            <ActionTile
+              onClick={() => setDialog({ type: 'trial' })}
+              icon={<PlayCircle size={18} />}
+              accent="bg-amber-50 text-amber-600"
+              title="Asignar prueba"
+              description="Reactiva el club con días gratis."
+            />
             {club.paymentProfile?.status === 'AVAILABLE' ? (
-              <button
-                onClick={handleCancelPaymentProfile}
-                className="flex flex-col items-start p-4 bg-white rounded-xl border border-red-200 shadow-sm hover:shadow-md hover:border-red-500/50 transition-all text-left group"
-              >
-                <div className="p-2 bg-red-50 text-red-600 rounded-lg mb-3 group-hover:scale-110 transition-transform">
-                  <XCircle size={20} />
-                </div>
-                <h4 className="font-bold text-danger text-sm mb-1">Desactivar Método de Pago</h4>
-                <p className="text-xs text-text-secondary">El club deberá pagar manualmente cada ciclo, sin ningún método guardado.</p>
-              </button>
+              <ActionTile
+                onClick={() => setDialog({ type: 'cancelProfile' })}
+                icon={<XCircle size={18} />}
+                accent="bg-rose-50 text-rose-600"
+                title="Desactivar método de pago"
+                description="Pagará manualmente cada mes."
+                danger
+              />
             ) : (
-              <div className="flex flex-col items-start p-4 bg-gray-50 rounded-xl border border-border opacity-70 text-left">
-                <div className="p-2 bg-gray-200 text-gray-500 rounded-lg mb-3">
-                  <CheckCircle2 size={20} />
-                </div>
-                <h4 className="font-bold text-text text-sm mb-1">Sin Método de Pago Guardado</h4>
-                <p className="text-xs text-text-secondary">El club ya está en modalidad de pago manual.</p>
+              <div className="flex items-center gap-3 rounded-2xl bg-bg p-4 text-sm text-text-secondary">
+                <CheckCircle2 size={18} className="shrink-0" />
+                Sin método de pago guardado: paga manualmente cada mes.
               </div>
             )}
-
           </div>
         </div>
       </div>
 
-      {/* Historial de Pagos Recientes */}
-      <div className="pt-6 border-t border-border">
-        <div className="flex items-center justify-between mb-4">
-          <h3 className="text-base font-bold text-text flex items-center gap-2">
-            <History size={17} className="text-primary" /> Últimas 3 Facturas
-          </h3>
-          <span className="text-xs text-text-secondary bg-bg px-2 py-1 rounded-md">Historial Visual</span>
-        </div>
-        
+      <div>
+        <SectionTitle>Últimos pagos</SectionTitle>
         {paymentsLoading ? (
-          <div className="animate-pulse flex gap-4">
-            <div className="h-24 bg-bg rounded-xl flex-1"></div>
-            <div className="h-24 bg-bg rounded-xl flex-1"></div>
-            <div className="h-24 bg-bg rounded-xl flex-1"></div>
+          <div className="space-y-2">
+            {Array.from({ length: 3 }).map((_, i) => (
+              <div key={i} className="h-16 animate-pulse rounded-2xl bg-bg" />
+            ))}
           </div>
         ) : recentPayments.length === 0 ? (
-          <div className="p-8 text-center bg-bg/50 rounded-xl border border-border border-dashed">
-            <AlertTriangle className="mx-auto text-text-secondary/50 mb-2" size={32} />
-            <p className="text-sm text-text-secondary">No hay pagos registrados para este club.</p>
-          </div>
+          <EmptyState icon={<Receipt size={22} />} title="Sin pagos registrados" description="Cuando el club pague, aparecerá aquí." />
         ) : (
-          <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
-            {recentPayments.map((payment: any, index: number) => (
-              <div key={payment.id} className="relative p-4 bg-white rounded-xl border border-border shadow-sm flex flex-col">
-                {index === 0 && (
-                  <span className="absolute -top-2 -right-2 bg-primary text-white text-[10px] font-bold px-2 py-0.5 rounded-full shadow-sm">
-                    Último
-                  </span>
+          <ul className="divide-y divide-border/60 overflow-hidden rounded-2xl border border-border/70 bg-surface">
+            {recentPayments.map((payment) => (
+              <li key={payment.id} className="flex items-center gap-3 px-4 py-3">
+                <div className="min-w-0 flex-1">
+                  <div className="flex flex-wrap items-center gap-2">
+                    <p className="text-sm font-semibold text-text">{formatCurrency(payment.amount, currency)}</p>
+                    <StatusBadge map={PAYMENT_STATUS} value={payment.status} />
+                  </div>
+                  <p className="mt-0.5 truncate text-xs text-text-secondary" title={payment.notes ?? undefined}>
+                    {formatPeriod(payment.periodMonth, payment.periodYear)} · {BILLING_METHOD[payment.method] ?? payment.method} ·{' '}
+                    <span title={formatDateTime(payment.createdAt)}>{formatRelative(payment.createdAt)}</span>
+                    {payment.notes ? ` · ${payment.notes}` : ''}
+                  </p>
+                </div>
+                {payment.status === 'PENDING' && (
+                  <button
+                    onClick={() => setDialog({ type: 'approve', paymentId: payment.id })}
+                    className="inline-flex h-9 shrink-0 items-center gap-1 rounded-xl bg-emerald-50 px-3 text-xs font-semibold text-emerald-700 transition hover:bg-emerald-100"
+                  >
+                    <Check size={14} /> Aprobar
+                  </button>
                 )}
-                <div className="flex justify-between items-start mb-2">
-                  <div>
-                    <p className="text-xs text-text-secondary uppercase tracking-wider mb-0.5">
-                      {payment.periodMonth}/{payment.periodYear}
-                    </p>
-                    <p className="font-bold text-text text-lg">
-                      {formatCurrency(payment.amount)}
-                    </p>
-                  </div>
-                  <div className={`p-1.5 rounded-md ${
-                    payment.status === 'SUCCESS' ? 'bg-success/10 text-success' : 
-                    payment.status === 'PENDING' ? 'bg-amber-100 text-amber-700' : 'bg-red-100 text-red-600'
-                  }`}>
-                    {payment.status === 'SUCCESS' ? <CheckCircle2 size={16} /> : 
-                     payment.status === 'PENDING' ? <Clock size={16} /> : <XCircle size={16} />}
-                  </div>
-                </div>
-                <div className="mt-auto pt-3 border-t border-border/50 text-xs text-text-secondary flex flex-col gap-1.5">
-                  <div className="flex items-center justify-between">
-                    <span className="truncate">{payment.method}</span>
-                    <span className="opacity-70">
-                      {new Date(payment.createdAt).toLocaleString('es-CO', { 
-                        day: 'numeric', month: 'short', year: '2-digit', 
-                        hour: '2-digit', minute: '2-digit' 
-                      })}
-                    </span>
-                  </div>
-                  {payment.notes && (
-                    <div className="flex items-start justify-between gap-2 mt-0.5 pt-1 border-t border-border/30">
-                      <span className="text-[10px] italic opacity-80 line-clamp-2" title={payment.notes}>
-                        {payment.notes}
-                      </span>
-                      {payment.status === 'PENDING' && (
-                        <button
-                          onClick={() => approveTransaction.mutate({ clubId: club.id, transactionId: payment.id })}
-                          disabled={approveTransaction.isPending}
-                          className="flex items-center justify-center p-1 bg-green-50 text-green-600 hover:bg-green-100 hover:text-green-700 rounded-md transition-colors"
-                          title="Aprobar pago manualmente"
-                        >
-                          <Check size={14} />
-                        </button>
-                      )}
-                      {payment.status === 'SUCCESS' && (
-                        <button
-                          onClick={() => {
-                            const reason = prompt('¿Motivo para revertir este pago?');
-                            if (reason !== null) {
-                              revertPayment.mutate({ clubId: club.id, paymentId: payment.id, reason });
-                            }
-                          }}
-                          disabled={revertPayment.isPending}
-                          className="flex items-center justify-center p-1 bg-red-50 text-red-600 hover:bg-red-100 hover:text-red-700 rounded-md transition-colors"
-                          title="Revertir pago"
-                        >
-                          <Undo size={14} />
-                        </button>
-                      )}
-                    </div>
-                  )}
-                  {!payment.notes && (
-                    <div className="flex justify-end mt-1 gap-2">
-                      {payment.status === 'PENDING' && (
-                        <button
-                          onClick={() => approveTransaction.mutate({ clubId: club.id, transactionId: payment.id })}
-                          disabled={approveTransaction.isPending}
-                          className="flex items-center justify-center p-1 bg-green-50 text-green-600 hover:bg-green-100 hover:text-green-700 rounded-md transition-colors"
-                          title="Aprobar pago manualmente"
-                        >
-                          <Check size={14} />
-                        </button>
-                      )}
-                      {payment.status === 'SUCCESS' && (
-                        <button
-                          onClick={() => {
-                            const reason = prompt('¿Motivo para revertir este pago?');
-                            if (reason !== null) {
-                              revertPayment.mutate({ clubId: club.id, paymentId: payment.id, reason });
-                            }
-                          }}
-                          disabled={revertPayment.isPending}
-                          className="flex items-center justify-center p-1 bg-red-50 text-red-600 hover:bg-red-100 hover:text-red-700 rounded-md transition-colors"
-                          title="Revertir pago"
-                        >
-                          <Undo size={14} />
-                        </button>
-                      )}
-                    </div>
-                  )}
-                </div>
-              </div>
+                {payment.status === 'SUCCESS' && (
+                  <button
+                    onClick={() => {
+                      setRevertReason('');
+                      setDialog({ type: 'revert', paymentId: payment.id });
+                    }}
+                    aria-label="Revertir pago"
+                    className="inline-flex h-9 shrink-0 items-center gap-1 rounded-xl px-3 text-xs font-medium text-text-secondary transition hover:bg-rose-50 hover:text-rose-600"
+                  >
+                    <Undo2 size={14} /> <span className="hidden sm:inline">Revertir</span>
+                  </button>
+                )}
+              </li>
             ))}
-            
-            {/* Si hay menos de 3, rellenar visualmente */}
-            {Array.from({ length: Math.max(0, 3 - recentPayments.length) }).map((_, i) => (
-              <div key={`empty-${i}`} className="p-4 bg-bg/30 rounded-xl border border-border border-dashed flex items-center justify-center opacity-50">
-                <p className="text-xs text-text-secondary">Sin más facturas</p>
-              </div>
-            ))}
-          </div>
+          </ul>
         )}
       </div>
 
-      {/* Modals invisibles hasta activarse */}
-      {activeModal === 'extend' && <ExtendSubscriptionModal club={club} onClose={() => setActiveModal(null)} />}
-      {activeModal === 'addons' && (
-        <AssignAddOnModal isOpen={true} clubId={club.id} onClose={() => setActiveModal(null)} />
+      {dialog?.type === 'extend' && (
+        <ExtendSubscriptionModal
+          club={club}
+          onClose={() => {
+            refreshClub();
+            setDialog(null);
+          }}
+        />
       )}
-      
+      {dialog?.type === 'addons' && (
+        <AssignAddOnModal
+          isOpen
+          clubId={club.id}
+          onClose={() => {
+            refreshClub();
+            setDialog(null);
+          }}
+        />
+      )}
+
+      <ConfirmDialog
+        open={dialog?.type === 'trial'}
+        onClose={() => setDialog(null)}
+        onConfirm={() => {
+          const days = parseInt(trialDays, 10);
+          if (!days || days <= 0) return toast.error('Ingresa un número de días válido');
+          assignTrial.mutate({ clubId: club.id, data: { days, reason: 'Asignado manualmente por admin' } }, handlers(`Prueba de ${days} días asignada`));
+        }}
+        title="Asignar período de prueba"
+        description="El club quedará en prueba gratis por los días que indiques."
+        confirmLabel="Asignar prueba"
+        loading={assignTrial.isPending}
+      >
+        <label className="block text-sm font-medium text-text">
+          Días de prueba
+          <input
+            type="number"
+            inputMode="numeric"
+            min="1"
+            value={trialDays}
+            onChange={(e) => setTrialDays(e.target.value)}
+            className="mt-1.5 h-11 w-full rounded-xl border border-border bg-surface px-3 text-sm focus:border-primary/50 focus:outline-none focus:ring-4 focus:ring-primary/15"
+          />
+        </label>
+        <div className="mt-3 flex gap-2">
+          {['7', '15', '30'].map((d) => (
+            <button
+              key={d}
+              onClick={() => setTrialDays(d)}
+              className={cn('h-9 flex-1 rounded-xl text-sm font-medium transition', trialDays === d ? 'bg-primary-light text-primary-hover ring-1 ring-primary/30' : 'bg-bg text-text-secondary hover:text-text')}
+            >
+              {d} días
+            </button>
+          ))}
+        </div>
+      </ConfirmDialog>
+
+      <ConfirmDialog
+        open={dialog?.type === 'cancelProfile'}
+        onClose={() => setDialog(null)}
+        onConfirm={() => cancelSubscription.mutate({ clubId: club.id }, handlers('Método de pago desactivado'))}
+        title="Desactivar método de pago"
+        description="Se quita el método guardado en Wompi. El club deberá pagar manualmente su próximo mes."
+        confirmLabel="Desactivar"
+        danger
+        loading={cancelSubscription.isPending}
+      />
+
+      <ConfirmDialog
+        open={dialog?.type === 'approve'}
+        onClose={() => setDialog(null)}
+        onConfirm={() =>
+          dialog?.type === 'approve' &&
+          approveTransaction.mutate({ clubId: club.id, transactionId: dialog.paymentId }, handlers('Pago aprobado y club activado'))
+        }
+        title="Aprobar pago"
+        description="Se marcará como pagado y el club quedará activo con su nuevo mes."
+        confirmLabel="Aprobar pago"
+        loading={approveTransaction.isPending}
+      />
+
+      <ConfirmDialog
+        open={dialog?.type === 'revert'}
+        onClose={() => setDialog(null)}
+        onConfirm={() =>
+          dialog?.type === 'revert' &&
+          revertPayment.mutate({ clubId: club.id, paymentId: dialog.paymentId, reason: revertReason || undefined }, handlers('Pago revertido'))
+        }
+        title="Revertir pago"
+        description="El pago quedará como fallido y se ajustarán las fechas del club."
+        confirmLabel="Revertir pago"
+        danger
+        loading={revertPayment.isPending}
+      >
+        <label className="block text-sm font-medium text-text">
+          Motivo (opcional)
+          <textarea
+            value={revertReason}
+            onChange={(e) => setRevertReason(e.target.value)}
+            rows={3}
+            placeholder="Ej. el banco reversó la transferencia"
+            className="mt-1.5 w-full rounded-xl border border-border bg-surface p-3 text-sm focus:border-primary/50 focus:outline-none focus:ring-4 focus:ring-primary/15"
+          />
+        </label>
+      </ConfirmDialog>
     </div>
   );
 }

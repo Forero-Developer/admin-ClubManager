@@ -16,6 +16,7 @@ export const ENDPOINTS = {
     releaseAccess: (id: string) => `/admin/clubs/${id}/payment-profile/release`,
     cancelAndRevert: (id: string) => `/admin/clubs/${id}/payment-profile/cancel`,
     cancelRecurring: (id: string) => `/admin/clubs/${id}/payment-profile/cancel-recurring`,
+    internal: (id: string) => `/admin/clubs/${id}/internal`,
   },
   players: {
     list: (clubId: string) => `/admin/clubs/${clubId}/players`,

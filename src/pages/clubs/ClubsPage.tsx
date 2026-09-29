@@ -1,154 +1,133 @@
 import { useState } from 'react';
-import { useClubs } from './hooks/useClubs';
 import { Link, useSearchParams } from 'react-router-dom';
-import { 
-  Search, Building2, Users, Calendar, CreditCard, 
-  TrendingUp, AlertTriangle, Clock, CheckCircle2, XCircle,
-  ChevronLeft, ChevronRight, SlidersHorizontal, X,
-  ArrowDownWideNarrow, ArrowUpNarrowWide, Trash2
+import { AnimatePresence, motion } from 'framer-motion';
+import {
+  Search, Building2, Users, CalendarClock, MapPin, SlidersHorizontal, X,
+  ArrowDownWideNarrow, ArrowUpNarrowWide, Trash2, ChevronRight, FlaskConical, Trophy,
 } from 'lucide-react';
-
-import { format } from 'date-fns';
-import { es } from 'date-fns/locale';
-import type { ClubListItem } from '@/services/clubs/clubs.types';
+import type { ClubListItem, ClubListQuery } from '@/services/clubs/clubs.types';
+import { useClubs } from './hooks/useClubs';
 import { DeleteClubModal } from './components/DeleteClubModal';
+import { Badge, StatusBadge } from '@/components/ui/Badge';
+import { Pagination } from '@/components/ui/Pagination';
+import { EmptyState } from '@/components/ui/Card';
+import { CLUB_STATUS, TONE_CLASSES } from '@/lib/status';
+import { daysUntil, formatCurrency, formatDate, formatRelative } from '@/lib/format';
+import { cn } from '@/lib/utils';
 
-const STATUS_CONFIG: Record<string, { label: string; class: string; icon: React.ReactNode }> = {
-  ACTIVE: { label: 'Activo', class: 'bg-success/10 text-success border-success/20', icon: <CheckCircle2 size={12} /> },
-  TRIAL: { label: 'Trial', class: 'bg-yellow-50 text-yellow-700 border-yellow-200', icon: <Clock size={12} /> },
-  PAST_DUE: { label: 'En Mora', class: 'bg-amber-50 text-amber-700 border-amber-200', icon: <AlertTriangle size={12} /> },
-  SUSPENDED: { label: 'Suspendido', class: 'bg-red-50 text-danger border-red-200', icon: <XCircle size={12} /> },
-};
+const STATUS_FILTERS = ['ACTIVE', 'TRIAL', 'PAST_DUE', 'SUSPENDED'] as const;
 
-const BILLING_CONFIG: Record<string, { label: string; class: string }> = {
-  ACTIVE: { label: 'Al día', class: 'text-success' },
-  TRIAL: { label: 'Trial', class: 'text-yellow-600' },
-  PAST_DUE: { label: 'En mora', class: 'text-amber-600' },
-  SUSPENDED: { label: 'Suspendido', class: 'text-danger' },
-};
+/** "Vence en 3 días" con color según qué tan cerca está. */
+function ExpiryInfo({ club }: { club: ClubListItem }) {
+  const date = club.status === 'TRIAL' ? club.trialEndsAt ?? club.subscriptionEnd : club.subscriptionEnd;
+  const days = daysUntil(date);
+  if (days === null) return <span className="text-text-secondary">Sin fecha</span>;
 
-const STATUS_FILTERS = ['TRIAL', 'ACTIVE', 'PAST_DUE', 'SUSPENDED'] as const;
+  const tone = days < 0 ? 'text-rose-600' : days <= 3 ? 'text-amber-600' : 'text-text-secondary';
+  const label = days < 0 ? `Venció ${formatRelative(date)}` : `Vence ${formatRelative(date)}`;
+  return (
+    <span className={cn('flex items-center gap-1.5', tone)} title={formatDate(date)}>
+      <CalendarClock size={13} />
+      <span className="font-medium">{label}</span>
+    </span>
+  );
+}
 
-function ClubCard({ club, onDeleteClick }: { club: ClubListItem; onDeleteClick: (club: ClubListItem) => void }) {
-  const statusCfg = STATUS_CONFIG[club.status] ?? STATUS_CONFIG.ACTIVE;
-  const billCfg = BILLING_CONFIG[club.billingStatus] ?? BILLING_CONFIG.ACTIVE;
-
-  const formatDate = (d?: string | null) =>
-    d ? format(new Date(d), "d MMM yy", { locale: es }) : '—';
+function ClubCard({ club, index, onDelete }: { club: ClubListItem; index: number; onDelete: (club: ClubListItem) => void }) {
+  const tone = TONE_CLASSES[(CLUB_STATUS[club.status]?.tone ?? 'neutral')];
+  const email = club.registeredEmail ?? club.users?.[0]?.email ?? club.email;
+  const isGoogle = club.authProvider ? club.authProvider === 'GOOGLE' : !!club.users?.[0]?.googleId;
+  const billable = club.billablePlayersCount ?? club.playerStats?.billable ?? club._count.players;
+  const location = [club.city?.name, club.country?.name].filter(Boolean).join(', ');
 
   return (
-    <div className={`group relative rounded-xl border bg-white shadow-sm hover:shadow-md transition-all duration-200 overflow-hidden ${
-      club.status === 'PAST_DUE' ? 'border-amber-200' : 'border-border hover:border-primary/30'
-    }`}>
-      {/* Accent top bar */}
-      <div className={`h-1 w-full ${
-        club.status === 'ACTIVE' ? 'bg-success' :
-        club.status === 'TRIAL' ? 'bg-yellow-400' :
-        club.status === 'PAST_DUE' ? 'bg-amber-400' : 'bg-red-400'
-      }`} />
+    <motion.div
+      layout
+      initial={{ opacity: 0, y: 12 }}
+      animate={{ opacity: 1, y: 0 }}
+      transition={{ duration: 0.3, delay: Math.min(index, 8) * 0.03 }}
+      className="group relative"
+    >
+      <Link
+        to={`/clubs/${club.id}`}
+        className="flex h-full flex-col overflow-hidden rounded-2xl border border-border/70 bg-surface shadow-[0_1px_2px_rgba(15,31,18,0.04)] transition hover:-translate-y-0.5 hover:border-primary/40 hover:shadow-lg hover:shadow-primary/5 active:scale-[0.99]"
+      >
+        <div className={cn('h-1 w-full', tone.dot)} />
 
-      <div className="p-5">
-        {/* Header */}
-        <div className="flex items-start gap-3 mb-4">
-          {club.logoUrl ? (
-            <img src={club.logoUrl} alt={club.name} className="h-12 w-12 rounded-lg object-cover border border-border flex-shrink-0" />
-          ) : (
-            <div className="h-12 w-12 rounded-lg bg-primary-light text-primary flex items-center justify-center border border-primary/10 flex-shrink-0">
-              <Building2 size={22} />
-            </div>
-          )}
-          <div className="flex-1 min-w-0">
-            <div className="flex items-center gap-2 flex-wrap">
-              <h3 className="font-semibold text-text truncate text-sm">{club.name}</h3>
-              <span className={`inline-flex items-center gap-1 px-1.5 py-0.5 rounded border text-[10px] font-medium ${statusCfg.class}`}>
-                {statusCfg.icon} {statusCfg.label}
-              </span>
-            </div>
-            
-            <div className="mt-1 flex flex-col gap-0.5">
-              {club.users && club.users.length > 0 ? (
-                <div className="flex items-center gap-1.5 overflow-hidden">
-                  <p className="text-xs text-text-secondary truncate" title="Login (Admin)">
-                    {club.users[0].email}
-                  </p>
-                  {club.users[0].googleId && (
-                    <span className="flex-shrink-0 px-1 py-0.5 bg-blue-50 text-blue-600 text-[8px] rounded font-bold border border-blue-100 uppercase tracking-wider">
-                      Google
-                    </span>
-                  )}
-                </div>
-              ) : (
-                <p className="text-xs text-text-secondary truncate" title="Contacto Club">
-                  {club.email}
-                </p>
-              )}
-              <p className="text-[10px] text-text-secondary/70 truncate">
-                {club.city ? `${club.city.name}, ${club.city.department.name} · ` : ''}{club.country.name}
-              </p>
-              <p className="text-[10px] text-text-secondary/70 truncate">Registrado: {formatDate(club.createdAt)}</p>
+        <div className="flex flex-1 flex-col p-4">
+          <div className="flex items-start gap-3">
+            {club.logoUrl ? (
+              <img src={club.logoUrl} alt="" className="h-12 w-12 shrink-0 rounded-xl border border-border object-cover" />
+            ) : (
+              <div className="flex h-12 w-12 shrink-0 items-center justify-center rounded-xl bg-primary-light text-primary-hover">
+                <Building2 size={22} />
+              </div>
+            )}
+            <div className="min-w-0 flex-1 pr-7">
+              <p className="truncate font-semibold text-text">{club.name}</p>
+              <div className="mt-1 flex flex-wrap gap-1.5">
+                <StatusBadge map={CLUB_STATUS} value={club.status} />
+                {club.isInternal && <Badge tone="trial">Tuyo</Badge>}
+                {club.isTournamentClub && (
+                  <Badge tone="warning">
+                    <Trophy size={10} /> Torneos
+                  </Badge>
+                )}
+              </div>
             </div>
           </div>
-        </div>
 
-        {/* Plan info */}
-        <div className="grid grid-cols-2 gap-3 mb-4">
-          <div className="bg-bg/60 rounded-lg p-2.5">
-            <p className="text-[10px] text-text-secondary uppercase tracking-wide font-medium flex items-center gap-1 mb-1">
-              <CreditCard size={10} /> Plan
-            </p>
-            <p className="text-sm font-semibold text-text truncate">
-              {club.subscriptionPrice?.plan.name ?? '—'}
-            </p>
-            {club.subscriptionPrice && (
-              <p className="text-[10px] text-text-secondary">
-                {new Intl.NumberFormat('es-CO', { style: 'currency', currency: club.subscriptionPrice.currency, maximumFractionDigits: 0 }).format(club.subscriptionPrice.price)}
-                /{club.subscriptionPrice.interval === 'MONTHLY' ? 'mes' : club.subscriptionPrice.interval}
+          <div className="mt-3 space-y-1 text-xs text-text-secondary">
+            <div className="flex min-w-0 items-center gap-1.5">
+              <span className="truncate">{email ?? 'Sin correo'}</span>
+              {isGoogle && <Badge tone="info">Google</Badge>}
+            </div>
+            {location && (
+              <p className="flex items-center gap-1 truncate">
+                <MapPin size={12} className="shrink-0" /> {location}
               </p>
             )}
+            <p title={formatDate(club.createdAt)}>Cliente desde {formatRelative(club.createdAt)}</p>
           </div>
-          <div className="bg-bg/60 rounded-lg p-2.5">
-            <p className="text-[10px] text-text-secondary uppercase tracking-wide font-medium flex items-center gap-1 mb-1">
-              <Users size={10} /> Miembros
-            </p>
-            <p className="text-sm font-semibold text-text">
-              {club.billablePlayersCount !== undefined ? (
-                <>
-                  {club.billablePlayersCount}{' '}
-                  <span className="text-xs font-normal text-text-secondary">/ {club._count.players}</span>
-                </>
-              ) : (
-                club._count.players
+
+          <div className="mt-4 grid grid-cols-2 gap-2">
+            <div className="rounded-xl bg-bg p-2.5">
+              <p className="text-[11px] text-text-secondary">Plan</p>
+              <p className="truncate text-sm font-semibold text-text">{club.subscriptionPrice?.plan.name ?? '—'}</p>
+              {club.subscriptionPrice && (
+                <p className="text-[11px] text-text-secondary">
+                  {formatCurrency(club.subscriptionPrice.price, club.subscriptionPrice.currency)}/mes
+                </p>
               )}
-            </p>
-            <p className="text-[10px] text-text-secondary">
-              {club.billablePlayersCount !== undefined ? 'a cobrar / totales' : 'jugadores'}
-            </p>
+            </div>
+            <div className="rounded-xl bg-bg p-2.5">
+              <p className="flex items-center gap-1 text-[11px] text-text-secondary">
+                <Users size={11} /> Deportistas
+              </p>
+              <p className="text-sm font-semibold text-text">
+                {billable} <span className="text-xs font-normal text-text-secondary">/ {club._count.players}</span>
+              </p>
+              <p className="text-[11px] text-text-secondary">a cobrar / total</p>
+            </div>
+          </div>
+
+          <div className="mt-auto flex items-center justify-between gap-2 border-t border-border/60 pt-3 text-xs">
+            <ExpiryInfo club={club} />
+            <span className="flex items-center gap-0.5 font-semibold text-primary-hover">
+              Ver <ChevronRight size={14} className="transition group-hover:translate-x-0.5" />
+            </span>
           </div>
         </div>
+      </Link>
 
-        {/* Billing status + dates */}
-        <div className="flex items-center justify-between text-xs border-t border-border pt-3">
-          <span className={`font-medium ${billCfg.class}`}>{billCfg.label}</span>
-          <span className="text-text-secondary flex items-center gap-1">
-            <Calendar size={11} />
-            {formatDate(club.subscriptionEnd)}
-          </span>
-        </div>
-      </div>
-
-      {/* Actions footer */}
-      <div className="px-5 pb-4 flex items-center justify-between gap-2 border-t border-border/50 pt-3 bg-bg/30">
-        <Link to={`/clubs/${club.id}`} className="text-xs text-primary hover:underline font-medium flex items-center gap-1">
-          <TrendingUp size={12} /> Gestionar Club y Facturación
-        </Link>
-        <button
-          onClick={() => onDeleteClick(club)}
-          className="text-xs text-danger hover:underline font-medium flex items-center gap-1"
-        >
-          <Trash2 size={12} /> Eliminar
-        </button>
-      </div>
-    </div>
+      <button
+        onClick={() => onDelete(club)}
+        aria-label={`Eliminar ${club.name}`}
+        className="absolute right-3 top-4 rounded-lg p-1.5 text-text-secondary/50 opacity-100 transition hover:bg-rose-50 hover:text-rose-600 sm:opacity-0 sm:group-hover:opacity-100"
+      >
+        <Trash2 size={15} />
+      </button>
+    </motion.div>
   );
 }
 
@@ -161,203 +140,276 @@ export function ClubsPage() {
   const minPlayers = searchParams.get('minPlayers') || '';
   const maxPlayers = searchParams.get('maxPlayers') || '';
   const orderByPlayers = searchParams.get('orderByPlayers') || '';
+  const onlyInternal = searchParams.get('internal') === 'only';
+  const tournamentFilter = searchParams.get('tournament') as 'only' | 'exclude' | null;
 
   const [searchInput, setSearchInput] = useState(search);
   const [minPlayersInput, setMinPlayersInput] = useState(minPlayers);
   const [maxPlayersInput, setMaxPlayersInput] = useState(maxPlayers);
-  
+  const [showFilters, setShowFilters] = useState(!!(minPlayers || maxPlayers || orderByPlayers));
   const [clubToDelete, setClubToDelete] = useState<ClubListItem | null>(null);
 
   const updateParams = (updates: Record<string, string | undefined>) => {
-    const newParams = new URLSearchParams(searchParams);
-    Object.entries(updates).forEach(([key, value]) => {
-      if (value) {
-        newParams.set(key, value);
-      } else {
-        newParams.delete(key);
-      }
-    });
-    setSearchParams(newParams);
+    const next = new URLSearchParams(searchParams);
+    Object.entries(updates).forEach(([key, value]) => (value ? next.set(key, value) : next.delete(key)));
+    setSearchParams(next);
   };
 
-  const setPage = (newPage: number) => {
-    updateParams({ page: newPage.toString() });
-  };
-
-  const { data, isLoading, isError } = useClubs({ 
-    page, 
+  const { data, isLoading, isError, isFetching } = useClubs({
+    page,
     limit: 12,
     search: search || undefined,
-    status: (statusFilter as any) || undefined,
+    status: (statusFilter || undefined) as ClubListQuery['status'],
     minPlayers: minPlayers ? parseInt(minPlayers, 10) : undefined,
     maxPlayers: maxPlayers ? parseInt(maxPlayers, 10) : undefined,
-    orderByPlayers: (orderByPlayers as any) || undefined,
+    orderByPlayers: (orderByPlayers || undefined) as ClubListQuery['orderByPlayers'],
+    internal: onlyInternal ? 'only' : undefined,
+    tournament: tournamentFilter ?? undefined,
   });
 
-  const handleSearch = () => {
-    updateParams({ search: searchInput, minPlayers: minPlayersInput, maxPlayers: maxPlayersInput, page: '1' });
-  };
+  const applySearch = () =>
+    updateParams({ search: searchInput.trim() || undefined, minPlayers: minPlayersInput, maxPlayers: maxPlayersInput, page: '1' });
 
-  const handleStatusFilter = (status: string) => {
-    updateParams({ status: statusFilter === status ? undefined : status, page: '1' });
-  };
-
-  const handleSort = (direction: string) => {
-    updateParams({ orderByPlayers: orderByPlayers === direction ? undefined : direction, page: '1' });
-  };
-
-  // Quick stats from data
-  const totalShown = data?.data.length ?? 0;
+  const advancedCount = [minPlayers, maxPlayers, orderByPlayers].filter(Boolean).length;
   const totalClubs = data?.total ?? 0;
+  const clubs = data?.data ?? [];
+
+  const inputCls =
+    'h-11 w-full rounded-xl border border-border bg-surface px-3 text-sm text-text placeholder:text-text-secondary/70 transition focus:border-primary/50 focus:outline-none focus:ring-4 focus:ring-primary/15';
 
   return (
-    <div className="space-y-6">
-      {/* Header */}
-      <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4">
+    <div className="space-y-5">
+      <div className="flex items-end justify-between gap-3">
         <div>
-          <h1 className="text-2xl font-bold tracking-tight text-text">Gestión de Clubes</h1>
-          <p className="text-text-secondary text-sm mt-0.5">
-            {totalClubs > 0 ? `${totalClubs} clubes registrados` : 'Visualiza y administra todos los clubes.'}
+          <h1 className="text-2xl font-bold tracking-tight text-text">Clubes</h1>
+          <p className="mt-0.5 text-sm text-text-secondary">
+            {totalClubs > 0 ? `${totalClubs} clubes${statusFilter || search ? ' con estos filtros' : ' registrados'}` : 'Administra todos los clubes.'}
           </p>
         </div>
+        {isFetching && !isLoading && <span className="h-2 w-2 animate-ping rounded-full bg-primary" aria-label="Actualizando" />}
       </div>
 
-      {/* Search + Filters */}
-      <div className="flex flex-col sm:flex-row gap-3">
-        <div className="relative flex-1 max-w-sm">
-          <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-text-secondary" />
+      {/* Buscador + botón de filtros */}
+      <div className="flex gap-2">
+        <div className="relative flex-1">
+          <Search className="absolute left-3.5 top-1/2 h-4 w-4 -translate-y-1/2 text-text-secondary" />
           <input
-            type="text"
+            type="search"
             value={searchInput}
             onChange={(e) => setSearchInput(e.target.value)}
-            onKeyDown={(e) => e.key === 'Enter' && handleSearch()}
-            placeholder="Buscar por nombre o email..."
-            className="w-full pl-9 pr-9 py-2 border border-border rounded-lg text-sm bg-white text-text placeholder:text-text-secondary focus:outline-none focus:ring-2 focus:ring-primary/30 focus:border-primary/50 transition"
+            onKeyDown={(e) => e.key === 'Enter' && applySearch()}
+            onBlur={() => searchInput.trim() !== search && applySearch()}
+            placeholder="Buscar por nombre o correo…"
+            className={cn(inputCls, 'pl-10 pr-10')}
           />
           {searchInput && (
-            <button onClick={() => { setSearchInput(''); updateParams({ search: undefined, page: '1' }); }} className="absolute right-3 top-1/2 -translate-y-1/2 text-text-secondary hover:text-text">
+            <button
+              onClick={() => {
+                setSearchInput('');
+                updateParams({ search: undefined, page: '1' });
+              }}
+              aria-label="Limpiar búsqueda"
+              className="absolute right-3 top-1/2 -translate-y-1/2 rounded-full p-1 text-text-secondary hover:bg-bg hover:text-text"
+            >
               <X size={14} />
             </button>
           )}
         </div>
-
-        {/* Players filter */}
-        <div className="flex items-center gap-2">
-          <Users size={16} className="text-text-secondary" />
-          <input 
-            type="number"
-            min="0"
-            placeholder="Min Jug."
-            value={minPlayersInput}
-            onChange={(e) => setMinPlayersInput(e.target.value)}
-            onKeyDown={(e) => e.key === 'Enter' && handleSearch()}
-            className="w-24 px-3 py-2 border border-border rounded-lg text-sm bg-white text-text placeholder:text-text-secondary focus:outline-none focus:ring-2 focus:ring-primary/30 focus:border-primary/50 transition"
-          />
-          <span className="text-text-secondary">-</span>
-          <input 
-            type="number"
-            min="0"
-            placeholder="Max Jug."
-            value={maxPlayersInput}
-            onChange={(e) => setMaxPlayersInput(e.target.value)}
-            onKeyDown={(e) => e.key === 'Enter' && handleSearch()}
-            className="w-24 px-3 py-2 border border-border rounded-lg text-sm bg-white text-text placeholder:text-text-secondary focus:outline-none focus:ring-2 focus:ring-primary/30 focus:border-primary/50 transition"
-          />
-          <button onClick={handleSearch} className="px-3 py-2 bg-primary text-white rounded-lg text-sm font-medium hover:bg-primary/90 transition-colors">
-            Filtrar
-          </button>
-
-          <div className="h-5 w-px bg-border mx-1"></div>
-          
-          <button 
-            onClick={() => handleSort('desc')}
-            className={`p-2 rounded-lg border transition-colors ${orderByPlayers === 'desc' ? 'bg-primary/10 border-primary/30 text-primary' : 'border-border text-text-secondary hover:bg-bg hover:text-text'}`}
-            title="Mayor a menor jugadores"
-          >
-            <ArrowDownWideNarrow size={16} />
-          </button>
-          <button 
-            onClick={() => handleSort('asc')}
-            className={`p-2 rounded-lg border transition-colors ${orderByPlayers === 'asc' ? 'bg-primary/10 border-primary/30 text-primary' : 'border-border text-text-secondary hover:bg-bg hover:text-text'}`}
-            title="Menor a mayor jugadores"
-          >
-            <ArrowUpNarrowWide size={16} />
-          </button>
-        </div>
-
-        {/* Status filter chips */}
-        <div className="flex items-center gap-2 flex-wrap">
-          <SlidersHorizontal size={15} className="text-text-secondary" />
-          {STATUS_FILTERS.map((s) => {
-            const cfg = STATUS_CONFIG[s];
-            return (
-              <button
-                key={s}
-                onClick={() => handleStatusFilter(s)}
-                className={`inline-flex items-center gap-1 px-2.5 py-1 rounded-full text-xs font-medium border transition-all ${
-                  statusFilter === s ? cfg.class + ' ring-2 ring-offset-1' : 'border-border text-text-secondary hover:border-primary/30'
-                }`}
-              >
-                {cfg.icon} {cfg.label}
-              </button>
-            );
-          })}
-          {statusFilter && (
-            <button onClick={() => updateParams({ status: undefined, page: '1' })} className="text-xs text-text-secondary hover:text-danger flex items-center gap-1">
-              <X size={12} /> Limpiar
-            </button>
+        <button
+          onClick={() => setShowFilters((v) => !v)}
+          className={cn(
+            'relative inline-flex h-11 shrink-0 items-center gap-2 rounded-xl border px-3.5 text-sm font-medium transition',
+            showFilters ? 'border-primary/40 bg-primary-light text-primary-hover' : 'border-border bg-surface text-text hover:border-primary/40',
           )}
-        </div>
+        >
+          <SlidersHorizontal size={16} />
+          <span className="hidden sm:inline">Filtros</span>
+          {advancedCount > 0 && (
+            <span className="flex h-5 min-w-5 items-center justify-center rounded-full bg-primary px-1 text-[11px] font-bold text-white">
+              {advancedCount}
+            </span>
+          )}
+        </button>
       </div>
 
-      {/* Content */}
-      {isLoading ? (
-        <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-4">
-          {Array.from({ length: 8 }).map((_, i) => (
-            <div key={i} className="h-64 rounded-xl border border-border bg-white animate-pulse" />
-          ))}
-        </div>
-      ) : isError ? (
-        <div className="text-center py-16 text-danger">Error al cargar los clubes.</div>
-      ) : (
-        <>
-          {totalShown === 0 ? (
-            <div className="text-center py-16 rounded-xl border-2 border-dashed border-border">
-              <Building2 size={40} className="mx-auto text-text-secondary/30 mb-3" />
-              <p className="text-text-secondary">No se encontraron clubes con los filtros seleccionados.</p>
-            </div>
-          ) : (
-            <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-4">
-              {data?.data.map((club) => (
-                <ClubCard key={club.id} club={club} onDeleteClick={setClubToDelete} />
-              ))}
-            </div>
+      {/* Estados: píldoras deslizables en celular */}
+      <div className="-mx-4 flex gap-2 overflow-x-auto px-4 pb-1 [scrollbar-width:none] sm:mx-0 sm:flex-wrap sm:px-0">
+        <button
+          onClick={() => updateParams({ status: undefined, page: '1' })}
+          className={cn(
+            'shrink-0 rounded-full px-3.5 py-2 text-sm font-medium transition',
+            !statusFilter ? 'bg-sidebar text-white shadow-md' : 'bg-surface text-text-secondary ring-1 ring-border hover:text-text',
           )}
+        >
+          Todos
+        </button>
+        {STATUS_FILTERS.map((s) => {
+          const meta = CLUB_STATUS[s];
+          const t = TONE_CLASSES[meta.tone];
+          const active = statusFilter === s;
+          return (
+            <button
+              key={s}
+              onClick={() => updateParams({ status: active ? undefined : s, page: '1' })}
+              className={cn(
+                'inline-flex shrink-0 items-center gap-2 rounded-full px-3.5 py-2 text-sm font-medium transition',
+                active ? cn(t.badge, 'shadow-sm ring-2 ring-inset') : 'bg-surface text-text-secondary ring-1 ring-border hover:text-text',
+              )}
+            >
+              <span className={cn('h-2 w-2 rounded-full', t.dot)} />
+              {meta.label}
+            </button>
+          );
+        })}
+        <button
+          onClick={() => updateParams({ internal: onlyInternal ? undefined : 'only', page: '1' })}
+          title="Clubes propios o de prueba (no cuentan en las métricas)"
+          className={cn(
+            'inline-flex shrink-0 items-center gap-2 rounded-full px-3.5 py-2 text-sm font-medium transition',
+            onlyInternal ? 'bg-violet-50 text-violet-700 shadow-sm ring-2 ring-inset ring-violet-300' : 'bg-surface text-text-secondary ring-1 ring-border hover:text-text',
+          )}
+        >
+          <FlaskConical size={14} /> Mis clubes
+        </button>
+        {([
+          ['only', 'De torneos'],
+          ['exclude', 'Sin torneos'],
+        ] as const).map(([value, label]) => {
+          const active = tournamentFilter === value;
+          return (
+            <button
+              key={value}
+              onClick={() => updateParams({ tournament: active ? undefined : value, page: '1' })}
+              title={value === 'only' ? 'Clubes registrados para participar en torneos' : 'Clubes que no son de torneos'}
+              className={cn(
+                'inline-flex shrink-0 items-center gap-2 rounded-full px-3.5 py-2 text-sm font-medium transition',
+                active ? 'bg-amber-50 text-amber-700 shadow-sm ring-2 ring-inset ring-amber-300' : 'bg-surface text-text-secondary ring-1 ring-border hover:text-text',
+              )}
+            >
+              <Trophy size={14} className={value === 'exclude' ? 'opacity-40' : undefined} /> {label}
+            </button>
+          );
+        })}
+      </div>
 
-          {/* Pagination */}
-          {(data?.lastPage ?? 1) > 1 && (
-            <div className="flex items-center justify-between text-sm text-text-secondary border-t border-border pt-4">
-              <span>Mostrando {totalShown} de {totalClubs} clubes · Página {data?.page} de {data?.lastPage}</span>
-              <div className="flex gap-2">
+      {/* Filtros avanzados */}
+      <AnimatePresence initial={false}>
+        {showFilters && (
+          <motion.div
+            initial={{ height: 0, opacity: 0 }}
+            animate={{ height: 'auto', opacity: 1 }}
+            exit={{ height: 0, opacity: 0 }}
+            transition={{ duration: 0.25, ease: 'easeOut' }}
+            className="overflow-hidden"
+          >
+            <div className="grid gap-4 rounded-2xl border border-border/70 bg-surface p-4 sm:grid-cols-[1fr_auto] sm:items-end">
+              <div>
+                <p className="mb-2 text-xs font-semibold text-text-secondary">Deportistas</p>
+                <div className="flex items-center gap-2">
+                  <input
+                    type="number"
+                    inputMode="numeric"
+                    min="0"
+                    placeholder="Mínimo"
+                    value={minPlayersInput}
+                    onChange={(e) => setMinPlayersInput(e.target.value)}
+                    onKeyDown={(e) => e.key === 'Enter' && applySearch()}
+                    className={inputCls}
+                  />
+                  <span className="text-text-secondary">–</span>
+                  <input
+                    type="number"
+                    inputMode="numeric"
+                    min="0"
+                    placeholder="Máximo"
+                    value={maxPlayersInput}
+                    onChange={(e) => setMaxPlayersInput(e.target.value)}
+                    onKeyDown={(e) => e.key === 'Enter' && applySearch()}
+                    className={inputCls}
+                  />
+                </div>
+              </div>
+
+              <div>
+                <p className="mb-2 text-xs font-semibold text-text-secondary">Ordenar por deportistas</p>
+                <div className="flex gap-2">
+                  {[
+                    { dir: 'desc', label: 'Más', icon: ArrowDownWideNarrow },
+                    { dir: 'asc', label: 'Menos', icon: ArrowUpNarrowWide },
+                  ].map(({ dir, label, icon: Icon }) => (
+                    <button
+                      key={dir}
+                      onClick={() => updateParams({ orderByPlayers: orderByPlayers === dir ? undefined : dir, page: '1' })}
+                      className={cn(
+                        'inline-flex h-11 flex-1 items-center justify-center gap-1.5 rounded-xl border px-3 text-sm font-medium transition sm:flex-none',
+                        orderByPlayers === dir ? 'border-primary/40 bg-primary-light text-primary-hover' : 'border-border text-text-secondary hover:text-text',
+                      )}
+                    >
+                      <Icon size={16} /> {label}
+                    </button>
+                  ))}
+                </div>
+              </div>
+
+              <div className="flex gap-2 sm:col-span-2 sm:justify-end">
+                {advancedCount > 0 && (
+                  <button
+                    onClick={() => {
+                      setMinPlayersInput('');
+                      setMaxPlayersInput('');
+                      updateParams({ minPlayers: undefined, maxPlayers: undefined, orderByPlayers: undefined, page: '1' });
+                    }}
+                    className="h-11 flex-1 rounded-xl px-4 text-sm font-medium text-text-secondary hover:bg-bg hover:text-text sm:flex-none"
+                  >
+                    Limpiar
+                  </button>
+                )}
                 <button
-                  disabled={!data || data.page === 1}
-                  onClick={() => setPage(page - 1)}
-                  className="flex items-center gap-1 px-3 py-1.5 rounded-lg border border-border hover:border-primary/40 hover:text-primary disabled:opacity-40 disabled:cursor-not-allowed transition text-xs font-medium"
+                  onClick={applySearch}
+                  className="h-11 flex-1 rounded-xl bg-primary px-5 text-sm font-semibold text-white shadow-sm transition hover:bg-primary-hover active:scale-[0.98] sm:flex-none"
                 >
-                  <ChevronLeft size={14} /> Anterior
-                </button>
-                <button
-                  disabled={!data || data.page === data.lastPage}
-                  onClick={() => setPage(page + 1)}
-                  className="flex items-center gap-1 px-3 py-1.5 rounded-lg border border-border hover:border-primary/40 hover:text-primary disabled:opacity-40 disabled:cursor-not-allowed transition text-xs font-medium"
-                >
-                  Siguiente <ChevronRight size={14} />
+                  Aplicar
                 </button>
               </div>
             </div>
-          )}
-        </>
+          </motion.div>
+        )}
+      </AnimatePresence>
+
+      {/* Contenido */}
+      {isLoading ? (
+        <div className="grid grid-cols-1 gap-3 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4">
+          {Array.from({ length: 8 }).map((_, i) => (
+            <div key={i} className="h-64 animate-pulse rounded-2xl bg-border/50" />
+          ))}
+        </div>
+      ) : isError ? (
+        <div className="rounded-2xl bg-rose-50 py-12 text-center text-rose-700">Error al cargar los clubes.</div>
+      ) : clubs.length === 0 ? (
+        <EmptyState
+          icon={<Building2 size={22} />}
+          title="No hay clubes con estos filtros"
+          description="Prueba con otro nombre, otro estado o limpia los filtros."
+        />
+      ) : (
+        <div className={cn('grid grid-cols-1 gap-3 transition-opacity sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4', isFetching && 'opacity-70')}>
+          {clubs.map((club, i) => (
+            <ClubCard key={club.id} club={club} index={i} onDelete={setClubToDelete} />
+          ))}
+        </div>
       )}
+
+      <Pagination
+        page={data?.page ?? page}
+        lastPage={data?.lastPage ?? 1}
+        total={totalClubs}
+        itemLabel="clubes"
+        onChange={(p) => {
+          updateParams({ page: String(p) });
+          document.getElementById('app-main')?.scrollTo({ top: 0, behavior: 'smooth' });
+        }}
+        className="border-t border-border/70 pt-4"
+      />
 
       {clubToDelete && (
         <DeleteClubModal
