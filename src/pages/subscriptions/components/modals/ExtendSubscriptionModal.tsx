@@ -6,7 +6,7 @@ import { Input } from '@/components/ui/Input';
 import { useSubscriptionActions } from '../../hooks/useSubscriptions';
 import type { SubscriptionListItem } from '@/services/subscriptions/subscriptions.types';
 
-export function ExtendSubscriptionModal({ club, onClose }: { club: SubscriptionListItem; onClose: () => void }) {
+export function ExtendSubscriptionModal({ club, onClose }: { club: Pick<SubscriptionListItem, 'id' | 'name'>; onClose: () => void }) {
   const { extendSubscription } = useSubscriptionActions();
   const [days, setDays] = useState('30');
   const [reason, setReason] = useState('');
