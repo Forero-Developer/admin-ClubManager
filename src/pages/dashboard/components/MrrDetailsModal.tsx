@@ -28,7 +28,7 @@ function PackChange({ club }: { club: MrrClub }) {
   );
 }
 
-function ClubRow({ club, index, onNavigate }: { club: MrrClub; index: number; onNavigate: () => void }) {
+function ClubRow({ club, index, rank, onNavigate }: { club: MrrClub; index: number; rank: number; onNavigate: () => void }) {
   const included = club.maxPlayers ?? 0;
   const packs = club.playerPacks.expected;
 
@@ -44,11 +44,16 @@ function ClubRow({ club, index, onNavigate }: { club: MrrClub; index: number; on
         className="group grid grid-cols-[1fr_auto] items-center gap-x-3 gap-y-2 rounded-2xl border border-border/70 bg-surface p-4 transition hover:border-primary/40 hover:shadow-md md:grid-cols-[minmax(0,2fr)_minmax(0,1.3fr)_repeat(3,minmax(0,1fr))_auto] md:gap-4"
       >
         {/* Club */}
-        <div className="min-w-0">
+        <div className="flex min-w-0 items-start gap-2.5">
+          <span className="mt-0.5 flex h-6 min-w-6 shrink-0 items-center justify-center rounded-full bg-bg px-1.5 text-[11px] font-bold text-text-secondary">
+            {rank}
+          </span>
+          <div className="min-w-0">
           <p className="truncate font-semibold text-text group-hover:text-primary-hover">{club.name}</p>
           <div className="mt-0.5 flex min-w-0 items-center gap-1.5 text-xs text-text-secondary">
             <span className="truncate">{club.email ?? 'Sin correo'}</span>
             {club.isGoogleAuth && <Badge tone="info">Google</Badge>}
+          </div>
           </div>
         </div>
 
@@ -110,8 +115,8 @@ export function MrrDetailsModal({ open, onClose, mrr, currency }: MrrDetailsModa
       title="¿De dónde sale el MRR esperado?"
       description={
         <>
-          {formatCurrency(mrr, currency)} al mes entre {data?.total ?? '…'} clubes al día. Toca un club para ver su
-          detalle.
+          {formatCurrency(mrr, currency)} al mes entre {data?.total ?? '…'} clubes al día, del que más paga al que
+          menos. Toca un club para ver su detalle.
         </>
       }
       header={
@@ -137,7 +142,7 @@ export function MrrDetailsModal({ open, onClose, mrr, currency }: MrrDetailsModa
       ) : (
         <ul className="space-y-2">
           {clubs.map((club, i) => (
-            <ClubRow key={club.id} club={club} index={i} onNavigate={onClose} />
+            <ClubRow key={club.id} club={club} index={i} rank={(page - 1) * 10 + i + 1} onNavigate={onClose} />
           ))}
         </ul>
       )}
