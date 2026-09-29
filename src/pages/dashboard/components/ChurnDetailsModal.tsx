@@ -1,92 +1,70 @@
 import { useState } from 'react';
+import { Link } from 'react-router-dom';
+import { ChevronRight } from 'lucide-react';
+import { Modal } from '@/components/ui/Modal';
+import { Pagination } from '@/components/ui/Pagination';
+import { Badge, StatusBadge } from '@/components/ui/Badge';
+import { CLUB_STATUS } from '@/lib/status';
+import { formatDate, formatRelative } from '@/lib/format';
 import { useChurnedClubs } from '../hooks/useChurnedClubs';
 
 interface ChurnDetailsModalProps {
+  open: boolean;
   onClose: () => void;
 }
 
-export function ChurnDetailsModal({ onClose }: ChurnDetailsModalProps) {
+export function ChurnDetailsModal({ open, onClose }: ChurnDetailsModalProps) {
   const [page, setPage] = useState(1);
-  const { data: response, isLoading } = useChurnedClubs(page);
-
-  const clubs = response?.data;
-  const meta = response?.meta;
+  const { data, isLoading } = useChurnedClubs(page, open);
+  const clubs: Array<{ id: string; name: string; status: string; email: string | null; isGoogleAuth: boolean; lastChargeAt: string | null }> =
+    data?.data ?? [];
 
   return (
-    <div className="fixed inset-0 z-50 flex items-center justify-center bg-black bg-opacity-50">
-      <div className="bg-white rounded-lg shadow-xl w-full max-w-2xl max-h-[80vh] flex flex-col">
-        <div className="flex items-center justify-between p-4 border-b border-border">
-          <h2 className="text-lg font-bold text-text">Detalle de Churn (Bajas Recientes)</h2>
-          <button onClick={onClose} className="text-text-secondary hover:text-text">
-            ✕
-          </button>
-        </div>
-        
-        <div className="p-4 overflow-y-auto flex-1">
-          {isLoading ? (
-            <p className="text-center text-text-secondary">Cargando clubes...</p>
-          ) : clubs && clubs.length > 0 ? (
-            <table className="w-full text-left border-collapse">
-              <thead>
-                <tr className="border-b border-border bg-background">
-                  <th className="p-2 font-medium text-sm text-text-secondary">Club</th>
-                  <th className="p-2 font-medium text-sm text-text-secondary">Estado</th>
-                  <th className="p-2 font-medium text-sm text-text-secondary">Último Pago (lastChargeAt)</th>
-                </tr>
-              </thead>
-              <tbody>
-                {clubs.map((club: any) => (
-                  <tr key={club.id} className="border-b border-border hover:bg-background/50">
-                    <td className="p-2 text-sm text-text">
-                      <div className="font-medium">{club.name}</div>
-                      {club.email && (
-                        <div className="text-xs text-text-secondary flex items-center gap-1 mt-0.5">
-                          {club.email}
-                          {club.isGoogleAuth && (
-                            <span className="px-1.5 py-0.5 bg-blue-100 text-blue-700 text-[10px] rounded-full font-medium">
-                              Google
-                            </span>
-                          )}
-                        </div>
-                      )}
-                    </td>
-                    <td className="p-2 text-sm text-text-secondary">
-                      <span className="px-2 py-1 bg-red-100 text-red-700 rounded text-xs font-semibold">
-                        {club.status}
-                      </span>
-                    </td>
-                    <td className="p-2 text-sm text-text-secondary">
-                      {new Date(club.lastChargeAt).toLocaleDateString()}
-                    </td>
-                  </tr>
-                ))}
-              </tbody>
-            </table>
-          ) : (
-            <p className="text-center text-text-secondary">No hay bajas registradas.</p>
-          )}
-        </div>
-
-        {meta && meta.totalPages > 1 && (
-          <div className="flex justify-between items-center p-4 border-t border-border">
-            <button 
-              disabled={page === 1} 
-              onClick={() => setPage(page - 1)}
-              className="px-3 py-1 bg-gray-100 text-sm rounded disabled:opacity-50"
-            >
-              Anterior
-            </button>
-            <span className="text-sm text-text-secondary">Página {meta.page} de {meta.totalPages}</span>
-            <button 
-              disabled={page === meta.totalPages} 
-              onClick={() => setPage(page + 1)}
-              className="px-3 py-1 bg-gray-100 text-sm rounded disabled:opacity-50"
-            >
-              Siguiente
-            </button>
-          </div>
-        )}
-      </div>
-    </div>
+    <Modal
+      open={open}
+      onClose={onClose}
+      title="Clubes que se fueron"
+      description="Suspendidos y sin pagar hace más de 15 días. Toca uno para ver su detalle."
+      footer={<Pagination page={page} lastPage={data?.lastPage ?? 1} total={data?.total} itemLabel="clubes" onChange={setPage} />}
+    >
+      {isLoading ? (
+        <ul className="space-y-2">
+          {Array.from({ length: 4 }).map((_, i) => (
+            <li key={i} className="h-16 animate-pulse rounded-2xl bg-bg" />
+          ))}
+        </ul>
+      ) : clubs.length === 0 ? (
+        <p className="py-10 text-center text-sm text-text-secondary">No hay bajas recientes. 🎉</p>
+      ) : (
+        <ul className="space-y-2">
+          {clubs.map((club) => (
+            <li key={club.id}>
+              <Link
+                to={`/clubs/${club.id}`}
+                onClick={onClose}
+                className="group flex items-center gap-3 rounded-2xl border border-border/70 bg-surface p-4 transition hover:border-primary/40 hover:shadow-md"
+              >
+                <div className="min-w-0 flex-1">
+                  <div className="flex flex-wrap items-center gap-2">
+                    <p className="truncate font-semibold text-text">{club.name}</p>
+                    <StatusBadge map={CLUB_STATUS} value={club.status} />
+                  </div>
+                  <div className="mt-0.5 flex items-center gap-1.5 text-xs text-text-secondary">
+                    <span className="truncate">{club.email ?? 'Sin correo'}</span>
+                    {club.isGoogleAuth && <Badge tone="info">Google</Badge>}
+                  </div>
+                </div>
+                <div className="shrink-0 text-right">
+                  <p className="text-xs text-text-secondary">Último pago</p>
+                  <p className="text-sm font-medium text-text">{formatDate(club.lastChargeAt)}</p>
+                  <p className="text-[11px] text-text-secondary">{formatRelative(club.lastChargeAt)}</p>
+                </div>
+                <ChevronRight size={18} className="shrink-0 text-text-secondary/50 transition group-hover:translate-x-0.5 group-hover:text-primary" />
+              </Link>
+            </li>
+          ))}
+        </ul>
+      )}
+    </Modal>
   );
 }
