@@ -9,6 +9,8 @@ export interface ClubListQuery {
   maxPlayers?: number;
   orderByPlayers?: 'asc' | 'desc';
   paymentProfileStatus?: string;
+  /** Clubes propios / de prueba: all, exclude (clientes reales) u only. */
+  internal?: 'all' | 'exclude' | 'only';
 }
 
 export interface ClubPaymentProfile {
@@ -29,6 +31,8 @@ export interface PaginatedResult<T> {
 export interface ClubListItem {
   id: string;
   name: string;
+  /** Club propio / de prueba: sus pagos no cuentan como ingresos de clientes. */
+  isInternal?: boolean;
   email: string | null;
   phone: string | null;
   logoUrl: string | null;
@@ -65,6 +69,41 @@ export interface ClubListItem {
     email: string;
     googleId: string | null;
   }>;
+  /** Correo con el que se registró el club (admin principal). */
+  registeredEmail?: string | null;
+  authProvider?: 'GOOGLE' | 'EMAIL' | null;
+  owner?: ClubMember | null;
+  admins?: ClubMember[];
+  members?: ClubMember[];
+  usersCount?: number;
+}
+
+/** Club al que pertenece un usuario (un usuario puede tener varios). */
+export interface MemberClub {
+  id: string;
+  name: string;
+  logoUrl: string | null;
+  status: string;
+  billingStatus: string;
+  role: string;
+  membershipStatus: string;
+  linkedAt: string;
+}
+
+export interface ClubMember {
+  id: string;
+  email: string;
+  googleId: string | null;
+  authProvider: 'GOOGLE' | 'EMAIL';
+  status: string;
+  createdAt: string;
+  deletedAt: string | null;
+  membershipId: string;
+  role: string;
+  membershipStatus: string;
+  linkedAt: string;
+  clubs: MemberClub[];
+  clubsCount: number;
 }
 
 export interface ClubPlayerStats {
@@ -81,6 +120,12 @@ export interface ClubPlayerStats {
 export interface ClubDetail extends ClubListItem {
   address: string | null;
   description: string | null;
+  isTournamentClub?: boolean;
+  emailVerifiedAt?: string | null;
+  phoneVerifiedAt?: string | null;
+  billingCycleEnd?: string | null;
+  /** Hasta cuándo conserva acceso si está en gracia (PAST_DUE). */
+  gracePeriodEndsAt?: string | null;
   playerMonthlyFee: number;
   paymentDueDay: number;
   paymentProfile: ClubPaymentProfile | null;
@@ -91,13 +136,17 @@ export interface ClubDetail extends ClubListItem {
   billablePlayersCount?: number;
   totalPlayersCount?: number;
   playerStats?: ClubPlayerStats;
+  whatsappMonthlyLimit?: number;
+  wallets?: Array<{ balance: number }>;
   addOns: Array<{
     id: string;
+    addOnId?: string;
     status: string;
     quantity: number;
     startDate: string;
     expiresAt: string | null;
-    addOn: { name: string; code: string };
+    addOn: { id?: string; name: string; code: string };
+    paymentDetails?: AddOnPaymentDetail[];
   }>;
   planHistory: Array<{
     id: string;
@@ -109,4 +158,21 @@ export interface ClubDetail extends ClubListItem {
       plan: { name: string };
     };
   }>;
+}
+
+export interface AddOnPaymentDetail {
+  id: string;
+  amount: number;
+  description: string | null;
+  periodStart: string | null;
+  saasPayment?: { status: string } | null;
+}
+
+/** Entrada del historial de planes / renovaciones del club. */
+export interface ClubPlanHistoryItem {
+  id: string;
+  changedAt: string;
+  reason: string | null;
+  toPrice: { price: number; currency: string; plan: { name: string } } | null;
+  saasPayments?: Array<{ amount: number; notes: string | null }>;
 }

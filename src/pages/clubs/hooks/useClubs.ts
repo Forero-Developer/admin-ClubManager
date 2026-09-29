@@ -1,4 +1,4 @@
-import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
+import { useQuery, useMutation, useQueryClient, keepPreviousData } from '@tanstack/react-query';
 import { clubsService } from '@/services/clubs/clubs.service';
 import type { ClubListQuery } from '@/services/clubs/clubs.types';
 
@@ -6,6 +6,7 @@ export function useClubs(params?: ClubListQuery) {
   return useQuery({
     queryKey: ['clubs', params],
     queryFn: () => clubsService.getAll(params),
+    placeholderData: keepPreviousData,
   });
 }
 
@@ -68,6 +69,21 @@ export function useDeleteClub() {
     mutationFn: (id: string) => clubsService.delete(id),
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ['clubs'] });
+    },
+  });
+}
+
+/** Marca un club como propio / de prueba y refresca todo lo que depende de ello. */
+export function useSetClubInternal() {
+  const queryClient = useQueryClient();
+
+  return useMutation({
+    mutationFn: ({ id, isInternal }: { id: string; isInternal: boolean }) => clubsService.setInternal(id, isInternal),
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ['clubs'] });
+      queryClient.invalidateQueries({ queryKey: ['dashboard'] });
+      queryClient.invalidateQueries({ queryKey: ['subscriptions'] });
+      queryClient.invalidateQueries({ queryKey: ['analytics'] });
     },
   });
 }
