@@ -3,7 +3,7 @@ import { Link, useSearchParams } from 'react-router-dom';
 import { AnimatePresence, motion } from 'framer-motion';
 import {
   Search, Building2, Users, CalendarClock, MapPin, SlidersHorizontal, X,
-  ArrowDownWideNarrow, ArrowUpNarrowWide, Trash2, ChevronRight, FlaskConical,
+  ArrowDownWideNarrow, ArrowUpNarrowWide, Trash2, ChevronRight, FlaskConical, Trophy,
 } from 'lucide-react';
 import type { ClubListItem, ClubListQuery } from '@/services/clubs/clubs.types';
 import { useClubs } from './hooks/useClubs';
@@ -68,6 +68,11 @@ function ClubCard({ club, index, onDelete }: { club: ClubListItem; index: number
               <div className="mt-1 flex flex-wrap gap-1.5">
                 <StatusBadge map={CLUB_STATUS} value={club.status} />
                 {club.isInternal && <Badge tone="trial">Tuyo</Badge>}
+                {club.isTournamentClub && (
+                  <Badge tone="warning">
+                    <Trophy size={10} /> Torneos
+                  </Badge>
+                )}
               </div>
             </div>
           </div>
@@ -136,6 +141,7 @@ export function ClubsPage() {
   const maxPlayers = searchParams.get('maxPlayers') || '';
   const orderByPlayers = searchParams.get('orderByPlayers') || '';
   const onlyInternal = searchParams.get('internal') === 'only';
+  const tournamentFilter = searchParams.get('tournament') as 'only' | 'exclude' | null;
 
   const [searchInput, setSearchInput] = useState(search);
   const [minPlayersInput, setMinPlayersInput] = useState(minPlayers);
@@ -158,6 +164,7 @@ export function ClubsPage() {
     maxPlayers: maxPlayers ? parseInt(maxPlayers, 10) : undefined,
     orderByPlayers: (orderByPlayers || undefined) as ClubListQuery['orderByPlayers'],
     internal: onlyInternal ? 'only' : undefined,
+    tournament: tournamentFilter ?? undefined,
   });
 
   const applySearch = () =>
@@ -264,6 +271,25 @@ export function ClubsPage() {
         >
           <FlaskConical size={14} /> Mis clubes
         </button>
+        {([
+          ['only', 'De torneos'],
+          ['exclude', 'Sin torneos'],
+        ] as const).map(([value, label]) => {
+          const active = tournamentFilter === value;
+          return (
+            <button
+              key={value}
+              onClick={() => updateParams({ tournament: active ? undefined : value, page: '1' })}
+              title={value === 'only' ? 'Clubes registrados para participar en torneos' : 'Clubes que no son de torneos'}
+              className={cn(
+                'inline-flex shrink-0 items-center gap-2 rounded-full px-3.5 py-2 text-sm font-medium transition',
+                active ? 'bg-amber-50 text-amber-700 shadow-sm ring-2 ring-inset ring-amber-300' : 'bg-surface text-text-secondary ring-1 ring-border hover:text-text',
+              )}
+            >
+              <Trophy size={14} className={value === 'exclude' ? 'opacity-40' : undefined} /> {label}
+            </button>
+          );
+        })}
       </div>
 
       {/* Filtros avanzados */}

@@ -4,7 +4,7 @@ import { AnimatePresence, motion } from 'framer-motion';
 import {
   ArrowLeft, Building2, MapPin, Users, Phone, Mail, CreditCard, AlertTriangle, Ban, Clock,
   Package, History, Layers, MessageCircle, PlayCircle, Trash2, XCircle, CalendarClock, Wallet,
-  ChevronRight, UserRound, FlaskConical,
+  ChevronRight, UserRound, FlaskConical, Trophy,
 } from 'lucide-react';
 import { toast } from 'sonner';
 import { useClubDetail, useClubPlanHistory, useReleaseAccess, useCancelAndRevert, useCancelRecurring, useSetClubInternal } from './hooks/useClubs';
@@ -457,6 +457,11 @@ export function ClubDetailPage() {
               <div className="flex flex-wrap items-center gap-2">
                 <h1 className="text-xl font-bold tracking-tight text-text sm:text-2xl">{club.name}</h1>
                 <StatusBadge map={CLUB_STATUS} value={club.status} size="md" />
+                {club.isTournamentClub && (
+                  <Badge tone="warning" size="md" title="Club registrado para participar en torneos">
+                    <Trophy size={12} /> Torneos
+                  </Badge>
+                )}
                 {club.isInternal && (
                   <Badge tone="trial" size="md" title="No cuenta en las métricas de clientes">
                     <FlaskConical size={12} /> Club propio

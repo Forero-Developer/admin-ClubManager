@@ -11,6 +11,8 @@ export interface ClubListQuery {
   paymentProfileStatus?: string;
   /** Clubes propios / de prueba: all, exclude (clientes reales) u only. */
   internal?: 'all' | 'exclude' | 'only';
+  /** Clubes de torneos: all, only (solo de torneos) o exclude (sin torneos). */
+  tournament?: 'all' | 'exclude' | 'only';
 }
 
 export interface ClubPaymentProfile {
@@ -33,6 +35,8 @@ export interface ClubListItem {
   name: string;
   /** Club propio / de prueba: sus pagos no cuentan como ingresos de clientes. */
   isInternal?: boolean;
+  /** Club que se registró para participar en torneos. */
+  isTournamentClub?: boolean;
   email: string | null;
   phone: string | null;
   logoUrl: string | null;
