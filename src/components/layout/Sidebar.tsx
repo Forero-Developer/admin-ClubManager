@@ -1,7 +1,7 @@
 import { useEffect } from 'react';
 import { Link, useLocation } from 'react-router-dom';
 import { AnimatePresence, motion } from 'framer-motion';
-import { LayoutDashboard, CreditCard, LogOut, ChevronLeft, ChevronRight, Building2, Tags, X } from 'lucide-react';
+import { LayoutDashboard, CreditCard, Wallet, LogOut, ChevronLeft, ChevronRight, Building2, Tags, X } from 'lucide-react';
 import { useUiStore } from '@/store/uiStore';
 import { useAuthStore } from '@/store/authStore';
 import { cn } from '@/lib/utils';
@@ -9,6 +9,7 @@ import { cn } from '@/lib/utils';
 const navigation = [
   { name: 'Dashboard', href: '/', icon: LayoutDashboard },
   { name: 'Clubes', href: '/clubs', icon: Building2 },
+  { name: 'Cobros del mes', href: '/collections', icon: Wallet },
   { name: 'Suscripciones', href: '/subscriptions', icon: CreditCard },
   { name: 'Planes', href: '/plans', icon: Tags },
 ];
