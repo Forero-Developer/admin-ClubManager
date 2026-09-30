@@ -112,8 +112,27 @@ function RegisterPaymentForm({ club, plans, addOnDefs }: { club: ClubDetail; pla
   const requiredFor = (capacity: number) => Math.max(0, Math.ceil((billable - capacity) / packSize));
   const currentPlan = plans.find((p) => p.id === club.subscriptionPrice?.plan?.id);
 
-  const [priceId, setPriceId] = useState(club.subscriptionPrice?.id ?? '');
-  const [packs, setPacks] = useState(() => requiredFor(capacityOf(currentPlan)));
+  // Solo planes mensuales de pago: registrar un pago de un plan de $0 no tiene sentido
+  const planOptions = useMemo(
+    () =>
+      plans.flatMap((plan) =>
+        (plan.pricing ?? [])
+          .filter((p) => p.interval === 'MONTHLY' && (p as PricingLike).isActive !== false && Number(p.price) > 0)
+          .map((p) => ({ id: p.id, plan, price: Number(p.price), currency: p.currency })),
+      ),
+    [plans],
+  );
+
+  // Si el club está en prueba o en el plan gratuito (ej. suspendido tras la
+  // prueba), al pagar pasa a PRO: se preselecciona PRO y los packs se
+  // calculan con los deportistas que incluye PRO, no con el "ilimitado" del trial.
+  const defaultOption =
+    planOptions.find((o) => o.id === club.subscriptionPrice?.id) ??
+    planOptions.find((o) => o.plan.name.toUpperCase() === 'PRO') ??
+    planOptions[0];
+
+  const [priceId, setPriceId] = useState(defaultOption?.id ?? club.subscriptionPrice?.id ?? '');
+  const [packs, setPacks] = useState(() => requiredFor(capacityOf(defaultOption?.plan ?? currentPlan)));
   const [extras, setExtras] = useState<Record<string, number>>(() => {
     const initial: Record<string, number> = {};
     (club.addOns ?? [])
@@ -134,16 +153,6 @@ function RegisterPaymentForm({ club, plans, addOnDefs }: { club: ClubDetail; pla
   const [periodOverride, setPeriodOverride] = useState<{ month: number; year: number } | null>(null);
   const [showSummary, setShowSummary] = useState(false);
 
-  // Solo planes mensuales activos
-  const planOptions = useMemo(
-    () =>
-      plans.flatMap((plan) =>
-        (plan.pricing ?? [])
-          .filter((p) => p.interval === 'MONTHLY' && (p as PricingLike).isActive !== false)
-          .map((p) => ({ id: p.id, plan, price: Number(p.price), currency: p.currency })),
-      ),
-    [plans],
-  );
   const selected = planOptions.find((o) => o.id === priceId);
 
   const baseCapacity = capacityOf(selected?.plan ?? currentPlan);
