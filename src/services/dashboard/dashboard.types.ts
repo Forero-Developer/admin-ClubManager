@@ -81,3 +81,45 @@ export interface Paginated<T> {
   lastPage: number;
   limit: number;
 }
+
+/** Estado de cobro de un club en el mes (GET admin/dashboard/collections). */
+export type CollectionBucket = 'PAID' | 'UPCOMING' | 'PAST_DUE' | 'SUSPENDED';
+
+export interface CollectionClub {
+  id: string;
+  name: string;
+  logoUrl: string | null;
+  status: string;
+  bucket: CollectionBucket;
+  planName: string | null;
+  currency: string;
+  /** Lo pagado (PAID) o lo que se espera cobrar con los deportistas de hoy */
+  amount: number;
+  paidAmount: number;
+  paidAt: string | null;
+  dueDate: string;
+  graceEndsAt: string | null;
+  lastPaymentAt: string | null;
+  lastPaymentAmount: number | null;
+  hasPendingPayment: boolean;
+  billablePlayers: number;
+  email: string | null;
+  isGoogleAuth: boolean;
+}
+
+export interface MonthCollections {
+  month: number;
+  year: number;
+  currency: string;
+  summary: {
+    expected: number;
+    collected: number;
+    pending: number;
+    upcoming: number;
+    pastDue: number;
+    recoverable: number;
+    collectionRate: number;
+    counts: { paid: number; upcoming: number; pastDue: number; suspended: number };
+  };
+  clubs: CollectionClub[];
+}

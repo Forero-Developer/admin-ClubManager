@@ -8,6 +8,7 @@ export const ENDPOINTS = {
     stats: '/admin/dashboard/stats',
     churnedClubs: '/admin/dashboard/churned-clubs',
     mrrClubs: '/admin/dashboard/mrr-clubs',
+    collections: '/admin/dashboard/collections',
   },
   clubs: {
     list: '/admin/clubs',
