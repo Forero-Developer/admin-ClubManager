@@ -92,6 +92,17 @@ export function Sidebar() {
     };
   }, [mobileMenuOpen]);
 
+  // Cierra el menú móvil si se agranda la pantalla (evita que se quede bloqueado el scroll)
+  useEffect(() => {
+    const handleResize = () => {
+      if (window.innerWidth >= 1024 && mobileMenuOpen) {
+        setMobileMenuOpen(false);
+      }
+    };
+    window.addEventListener('resize', handleResize);
+    return () => window.removeEventListener('resize', handleResize);
+  }, [mobileMenuOpen, setMobileMenuOpen]);
+
   return (
     <>
       {/* Escritorio: fijo y compactable */}
