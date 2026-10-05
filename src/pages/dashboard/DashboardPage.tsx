@@ -22,10 +22,19 @@ function DeltaPill({ current, previous }: { current: number; previous: number })
   );
 }
 
+const ALL_MONTHS = [
+  'Enero', 'Febrero', 'Marzo', 'Abril', 'Mayo', 'Junio',
+  'Julio', 'Agosto', 'Septiembre', 'Octubre', 'Noviembre', 'Diciembre'
+];
+
 export function DashboardPage() {
   const [showMrrModal, setShowMrrModal] = useState(false);
   const [showChurnModal, setShowChurnModal] = useState(false);
-  const { data: stats, isLoading, isError, error } = useDashboardStats();
+  
+  const [selectedMonth, setSelectedMonth] = useState(() => new Date().getMonth() + 1);
+  const [selectedYear, setSelectedYear] = useState(() => new Date().getFullYear());
+
+  const { data: stats, isLoading, isError, error } = useDashboardStats(selectedMonth, selectedYear);
 
   if (isLoading) {
     return (
@@ -59,9 +68,39 @@ export function DashboardPage() {
 
   return (
     <div className="space-y-8">
-      <div>
-        <h1 className="text-2xl font-bold tracking-tight text-text">Dashboard</h1>
-        <p className="mt-0.5 text-sm text-text-secondary">Así va la plataforma hoy.</p>
+      <div className="flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between">
+        <div>
+          <h1 className="text-2xl font-bold tracking-tight text-text">Dashboard</h1>
+          <p className="mt-0.5 text-sm text-text-secondary">Así va la plataforma.</p>
+        </div>
+        
+        <div className="flex shrink-0 items-center gap-2">
+          <select
+            value={selectedMonth}
+            onChange={(e) => setSelectedMonth(Number(e.target.value))}
+            className="h-10 rounded-xl border border-border bg-surface px-3 text-sm font-medium text-text focus:border-primary/50 focus:outline-none focus:ring-4 focus:ring-primary/15"
+          >
+            {ALL_MONTHS.map((m, i) => (
+              <option key={m} value={i + 1}>
+                {m}
+              </option>
+            ))}
+          </select>
+          <select
+            value={selectedYear}
+            onChange={(e) => setSelectedYear(Number(e.target.value))}
+            className="h-10 rounded-xl border border-border bg-surface px-3 text-sm font-medium text-text focus:border-primary/50 focus:outline-none focus:ring-4 focus:ring-primary/15"
+          >
+            {[...Array(5)].map((_, i) => {
+              const y = new Date().getFullYear() - i;
+              return (
+                <option key={y} value={y}>
+                  {y}
+                </option>
+              );
+            })}
+          </select>
+        </div>
       </div>
 
       {/* MRR esperado: la métrica principal, explicada en la misma tarjeta */}

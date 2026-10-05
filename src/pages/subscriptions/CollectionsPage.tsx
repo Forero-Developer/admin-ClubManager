@@ -11,6 +11,11 @@ import { useCollections } from './hooks/useCollections';
 
 type Tab = 'PENDING' | CollectionBucket;
 
+const ALL_MONTHS = [
+  'Enero', 'Febrero', 'Marzo', 'Abril', 'Mayo', 'Junio',
+  'Julio', 'Agosto', 'Septiembre', 'Octubre', 'Noviembre', 'Diciembre'
+];
+
 const BUCKET: Record<CollectionBucket, { label: string; tone: 'success' | 'warning' | 'danger' | 'info'; icon: ReactNode; accent: string }> = {
   PAID: { label: 'Pagó', tone: 'success', icon: <CheckCircle2 size={18} />, accent: 'bg-emerald-50 text-emerald-600' },
   UPCOMING: { label: 'Por vencer', tone: 'info', icon: <CalendarClock size={18} />, accent: 'bg-sky-50 text-sky-600' },
@@ -88,7 +93,10 @@ function ClubRow({ club, index }: { club: CollectionClub; index: number }) {
 }
 
 export function CollectionsPage() {
-  const { data, isLoading, isError } = useCollections();
+  const [selectedMonth, setSelectedMonth] = useState(() => new Date().getMonth() + 1);
+  const [selectedYear, setSelectedYear] = useState(() => new Date().getFullYear());
+  
+  const { data, isLoading, isError } = useCollections(selectedMonth, selectedYear);
   const [tab, setTab] = useState<Tab>('PENDING');
   const [search, setSearch] = useState('');
 
@@ -132,11 +140,41 @@ export function CollectionsPage() {
 
   return (
     <div className="space-y-5">
-      <div>
-        <h1 className="text-2xl font-bold tracking-tight text-text">Cobros de {monthName}</h1>
-        <p className="mt-0.5 text-sm text-text-secondary">
-          Quién ya pagó, quién falta y cuánto esperas recaudar este mes. Los montos pendientes se calculan con los deportistas de hoy.
-        </p>
+      <div className="flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between">
+        <div>
+          <h1 className="text-2xl font-bold tracking-tight text-text">Cobros de {monthName}</h1>
+          <p className="mt-0.5 text-sm text-text-secondary">
+            Quién ya pagó, quién falta y cuánto esperas recaudar este mes.
+          </p>
+        </div>
+        
+        <div className="flex shrink-0 items-center gap-2">
+          <select
+            value={selectedMonth}
+            onChange={(e) => setSelectedMonth(Number(e.target.value))}
+            className="h-10 rounded-xl border border-border bg-surface px-3 text-sm font-medium text-text focus:border-primary/50 focus:outline-none focus:ring-4 focus:ring-primary/15"
+          >
+            {ALL_MONTHS.map((m, i) => (
+              <option key={m} value={i + 1}>
+                {m}
+              </option>
+            ))}
+          </select>
+          <select
+            value={selectedYear}
+            onChange={(e) => setSelectedYear(Number(e.target.value))}
+            className="h-10 rounded-xl border border-border bg-surface px-3 text-sm font-medium text-text focus:border-primary/50 focus:outline-none focus:ring-4 focus:ring-primary/15"
+          >
+            {[...Array(5)].map((_, i) => {
+              const y = new Date().getFullYear() - i;
+              return (
+                <option key={y} value={y}>
+                  {y}
+                </option>
+              );
+            })}
+          </select>
+        </div>
       </div>
 
       {/* Avance del recaudo */}
