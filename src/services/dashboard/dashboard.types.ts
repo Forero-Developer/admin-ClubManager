@@ -44,7 +44,13 @@ export interface DashboardStats {
     revenueThisMonth: number;
     paymentsThisMonth: number;
     revenueAllTime: number;
-    paymentsAllTime: number;
+  };
+  /** Clubes que solo usan la app para torneos (excluidos de métricas SaaS). */
+  tournaments?: {
+    totalClubs: number;
+    newThisMonth: number;
+    convertedToClient: number;
+    convertedToClientThisMonth: number;
   };
   alerts: {
     /** Clubes en gracia (PAST_DUE). */

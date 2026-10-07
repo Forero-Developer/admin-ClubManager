@@ -1,6 +1,6 @@
 import { useEffect } from 'react';
 import { Link, useLocation } from 'react-router-dom';
-import { AnimatePresence, motion } from 'framer-motion';
+import { motion } from 'framer-motion';
 import { LayoutDashboard, CreditCard, Wallet, LogOut, ChevronLeft, ChevronRight, Building2, Tags, X } from 'lucide-react';
 import { useUiStore } from '@/store/uiStore';
 import { useAuthStore } from '@/store/authStore';
@@ -84,13 +84,8 @@ export function Sidebar() {
     setMobileMenuOpen(false);
   }, [location.pathname, setMobileMenuOpen]);
 
-  // Bloquea el scroll del fondo mientras el menú del celular está abierto
-  useEffect(() => {
-    document.body.style.overflow = mobileMenuOpen ? 'hidden' : '';
-    return () => {
-      document.body.style.overflow = '';
-    };
-  }, [mobileMenuOpen]);
+  // El scroll del fondo no se bloquea manualmente en el body porque causa
+  // problemas en iOS Safari con layouts de 100dvh. El backdrop cubre la pantalla.
 
   // Cierra el menú móvil si se agranda la pantalla (evita que se quede bloqueado el scroll)
   useEffect(() => {
@@ -127,39 +122,33 @@ export function Sidebar() {
         <NavContent compact={!sidebarOpen} />
       </aside>
 
-      {/* Celular / tablet: menú deslizable */}
-      <AnimatePresence>
-        {mobileMenuOpen && (
-          <>
-            <motion.div
-              className="fixed inset-0 z-40 bg-slate-950/50 backdrop-blur-[2px] lg:hidden"
-              initial={{ opacity: 0 }}
-              animate={{ opacity: 1 }}
-              exit={{ opacity: 0 }}
-              onClick={() => setMobileMenuOpen(false)}
-            />
-            <motion.aside
-              className="fixed inset-y-0 left-0 z-50 flex w-[82%] max-w-xs flex-col bg-sidebar text-white shadow-2xl lg:hidden"
-              initial={{ x: '-100%' }}
-              animate={{ x: 0 }}
-              exit={{ x: '-100%' }}
-              transition={{ type: 'spring', damping: 32, stiffness: 320 }}
-            >
-              <div className="flex h-16 shrink-0 items-center justify-between border-b border-white/10 px-5">
-                <Logo compact={false} />
-                <button
-                  onClick={() => setMobileMenuOpen(false)}
-                  aria-label="Cerrar menú"
-                  className="rounded-full p-2 text-white/70 hover:bg-white/10 hover:text-white"
-                >
-                  <X size={20} />
-                </button>
-              </div>
-              <NavContent compact={false} onNavigate={() => setMobileMenuOpen(false)} />
-            </motion.aside>
-          </>
-        )}
-      </AnimatePresence>
+      {/* Celular / tablet: menú deslizable sin animaciones problemáticas */}
+      {mobileMenuOpen && (
+        <>
+          {/* Backdrop */}
+          <div
+            className="fixed inset-0 z-40 bg-slate-950/50 backdrop-blur-[2px] lg:hidden"
+            onClick={() => setMobileMenuOpen(false)}
+          />
+          
+          {/* Sidebar */}
+          <aside
+            className="fixed inset-y-0 left-0 z-50 flex w-[82%] max-w-xs flex-col bg-sidebar text-white shadow-2xl lg:hidden"
+          >
+            <div className="flex h-16 shrink-0 items-center justify-between border-b border-white/10 px-5">
+              <Logo compact={false} />
+              <button
+                onClick={() => setMobileMenuOpen(false)}
+                aria-label="Cerrar menú"
+                className="rounded-full p-2 text-white/70 hover:bg-white/10 hover:text-white"
+              >
+                <X size={20} />
+              </button>
+            </div>
+            <NavContent compact={false} onNavigate={() => setMobileMenuOpen(false)} />
+          </aside>
+        </>
+      )}
     </>
   );
 }
