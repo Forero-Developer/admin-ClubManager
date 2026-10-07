@@ -1,7 +1,7 @@
 import { useState } from 'react';
 import { Link } from 'react-router-dom';
 import { motion } from 'framer-motion';
-import { Users, Building2, Activity, UserMinus, Wallet, CalendarRange, ArrowUpRight, ArrowDownRight, ChevronRight, ShieldAlert, FlaskConical } from 'lucide-react';
+import { Users, Building2, Activity, UserMinus, Wallet, CalendarRange, ArrowUpRight, ArrowDownRight, ChevronRight, ShieldAlert, FlaskConical, Trophy } from 'lucide-react';
 import { useDashboardStats } from './hooks/useDashboardStats';
 import { formatCurrency, formatNumber } from '@/lib/format';
 import { StatCard, SectionTitle } from '@/components/ui/Card';
@@ -165,6 +165,24 @@ export function DashboardPage() {
           </span>
           <ChevronRight size={16} className="shrink-0 opacity-50 transition group-hover:translate-x-0.5" />
         </Link>
+      )}
+
+      {stats.tournaments && stats.tournaments.totalClubs > 0 && (
+        <div className="group -mt-4 flex flex-col gap-2 rounded-2xl bg-amber-50 px-4 py-3 text-sm text-amber-900 ring-1 ring-inset ring-amber-200 transition hover:shadow-md sm:flex-row sm:items-center sm:gap-3">
+          <div className="flex items-center gap-2">
+            <Trophy size={18} className="shrink-0 text-amber-600" />
+            <span className="font-medium">
+              <b>{stats.tournaments.totalClubs} club{stats.tournaments.totalClubs > 1 ? 'es' : ''} de torneos</b> (excluidos del MRR).
+            </span>
+          </div>
+          <div className="flex flex-1 flex-wrap items-center gap-x-4 gap-y-1 text-amber-800/80 sm:justify-end">
+            <span>+{stats.tournaments.newThisMonth} nuevos este mes</span>
+            <span className="flex items-center gap-1 font-semibold text-amber-700">
+              <ArrowUpRight size={14} />
+              {stats.tournaments.convertedToClient} convertidos a SaaS ({stats.tournaments.convertedToClientThisMonth} este mes)
+            </span>
+          </div>
+        </div>
       )}
 
       <section>
