@@ -99,11 +99,13 @@ function SubRow({ club }: { club: any }) {
  * Además del tipo, mira la descripción ("Compra de AddOn …"): el backend
  * anterior marcaba MIXED cualquier mensualidad con una línea de add-on.
  */
-function paymentKindLabel(tx: { type?: string; description?: string | null }) {
+function paymentKindLabel(tx: { type?: string; description?: string | null; isWhatsapp?: boolean }) {
+  // El backend lo sabe por el paquete del pago (también en transferencias registradas a mano)
+  if (tx.isWhatsapp) return 'WhatsApp';
   const description = tx.description ?? '';
   const isAddonPurchase = tx.type === 'ADDON' || /^Compra de AddOn/i.test(description);
   if (!isAddonPurchase) return 'Mensualidad';
-  // Los paquetes de mensajes son de WhatsApp
+  // Backend anterior (sin isWhatsapp): por la descripción
   return /whats|mensaje/i.test(description) ? 'WhatsApp' : 'Add-on';
 }
 
