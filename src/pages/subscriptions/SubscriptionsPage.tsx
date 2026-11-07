@@ -93,6 +93,18 @@ function SubRow({ club }: { club: any }) {
 }
 
 // ── Main page ─────────────────────────────────────────────────────────────────
+/**
+ * Qué fue el pago: una mensualidad (aunque traiga add-ons mensuales, como
+ * packs de jugadores) o la compra de un add-on. Antes cualquier línea de
+ * add-on hacía que una mensualidad se viera como "Add-on".
+ */
+function paymentKindLabel(tx: { type?: string; includesAddons?: boolean }) {
+  if (tx.type === 'ADDON') return 'Add-on';
+  if (tx.type === 'SUBSCRIPTION') return tx.includesAddons ? 'Mensualidad + add-ons' : 'Mensualidad';
+  // MIXED: deuda prorrateada, o (backend anterior) cualquier pago con alguna línea de add-on
+  return tx.type === 'MIXED' ? 'Pago con add-ons' : 'Pago';
+}
+
 export function SubscriptionsPage() {
   const [page, setPage] = useState(1);
   const [txPage, setTxPage] = useState(1);
@@ -290,7 +302,7 @@ export function SubscriptionsPage() {
                       <div className="min-w-0 flex-1">
                         <div className="flex flex-wrap items-center gap-2">
                           <p className="truncate text-sm font-semibold text-text group-hover:text-primary-hover">{tx.clubName}</p>
-                          <Badge tone={tx.type === 'SUBSCRIPTION' ? 'info' : 'trial'}>{tx.type === 'SUBSCRIPTION' ? 'Mensualidad' : 'Add-on'}</Badge>
+                          <Badge tone={tx.type === 'ADDON' ? 'trial' : 'info'}>{paymentKindLabel(tx)}</Badge>
                         </div>
                         <p className="mt-0.5 truncate text-xs text-text-secondary">
                           {formatDate(tx.createdAt)} · {formatRelative(tx.createdAt)}{tx.description ? ` · ${tx.description}` : ''}
