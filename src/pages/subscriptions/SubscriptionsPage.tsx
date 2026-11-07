@@ -100,8 +100,11 @@ function SubRow({ club }: { club: any }) {
  * anterior marcaba MIXED cualquier mensualidad con una línea de add-on.
  */
 function paymentKindLabel(tx: { type?: string; description?: string | null }) {
-  const isAddonPurchase = tx.type === 'ADDON' || /^Compra de AddOn/i.test(tx.description ?? '');
-  return isAddonPurchase ? 'Add-on' : 'Mensualidad';
+  const description = tx.description ?? '';
+  const isAddonPurchase = tx.type === 'ADDON' || /^Compra de AddOn/i.test(description);
+  if (!isAddonPurchase) return 'Mensualidad';
+  // Los paquetes de mensajes son de WhatsApp
+  return /whats|mensaje/i.test(description) ? 'WhatsApp' : 'Add-on';
 }
 
 export function SubscriptionsPage() {
@@ -301,7 +304,7 @@ export function SubscriptionsPage() {
                       <div className="min-w-0 flex-1">
                         <div className="flex flex-wrap items-center gap-2">
                           <p className="truncate text-sm font-semibold text-text group-hover:text-primary-hover">{tx.clubName}</p>
-                          <Badge tone={paymentKindLabel(tx) === 'Add-on' ? 'trial' : 'info'}>{paymentKindLabel(tx)}</Badge>
+                          <Badge tone={paymentKindLabel(tx) === 'Mensualidad' ? 'info' : 'trial'}>{paymentKindLabel(tx)}</Badge>
                         </div>
                         <p className="mt-0.5 truncate text-xs text-text-secondary">
                           {formatDate(tx.createdAt)} · {formatRelative(tx.createdAt)}{tx.description ? ` · ${tx.description}` : ''}
