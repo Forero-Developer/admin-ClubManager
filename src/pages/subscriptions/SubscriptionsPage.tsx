@@ -94,15 +94,21 @@ function SubRow({ club }: { club: any }) {
 
 // ── Main page ─────────────────────────────────────────────────────────────────
 /**
- * Qué fue el pago: una mensualidad (aunque traiga add-ons mensuales, como
- * packs de jugadores) o la compra de un add-on. Antes cualquier línea de
- * add-on hacía que una mensualidad se viera como "Add-on".
+ * Qué fue el pago: la compra de un add-on (p. ej. un pack de mensajes) o la
+ * mensualidad (aunque incluya packs de jugadores, que son parte de ella).
+ * Además del tipo, mira la descripción ("Compra de AddOn …"): el backend
+ * anterior marcaba MIXED cualquier mensualidad con una línea de add-on.
  */
-function paymentKindLabel(tx: { type?: string; includesAddons?: boolean }) {
-  if (tx.type === 'ADDON') return 'Add-on';
-  if (tx.type === 'SUBSCRIPTION') return tx.includesAddons ? 'Mensualidad + add-ons' : 'Mensualidad';
-  // MIXED: deuda prorrateada, o (backend anterior) cualquier pago con alguna línea de add-on
-  return tx.type === 'MIXED' ? 'Pago con add-ons' : 'Pago';
+function paymentKindLabel(tx: { type?: string; description?: string | null; isWhatsapp?: boolean; addons?: string[] }) {
+  // El backend lo sabe por el paquete del pago (también en transferencias registradas a mano)
+  if (tx.isWhatsapp) return 'WhatsApp';
+  const description = tx.description ?? '';
+  const isAddonPurchase = tx.type === 'ADDON' || /^Compra de AddOn/i.test(description);
+  if (!isAddonPurchase) return 'Mensualidad';
+  // Backend anterior (sin isWhatsapp): por la descripción
+  if (/whats|mensaje/i.test(description)) return 'WhatsApp';
+  // Cualquier otro paquete (también los que se creen después): con su nombre
+  return tx.addons?.length ? `Add-on · ${tx.addons.join(', ')}` : 'Add-on';
 }
 
 export function SubscriptionsPage() {
@@ -302,7 +308,7 @@ export function SubscriptionsPage() {
                       <div className="min-w-0 flex-1">
                         <div className="flex flex-wrap items-center gap-2">
                           <p className="truncate text-sm font-semibold text-text group-hover:text-primary-hover">{tx.clubName}</p>
-                          <Badge tone={tx.type === 'ADDON' ? 'trial' : 'info'}>{paymentKindLabel(tx)}</Badge>
+                          <Badge tone={paymentKindLabel(tx) === 'Mensualidad' ? 'info' : 'trial'}>{paymentKindLabel(tx)}</Badge>
                         </div>
                         <p className="mt-0.5 truncate text-xs text-text-secondary">
                           {formatDate(tx.createdAt)} · {formatRelative(tx.createdAt)}{tx.description ? ` · ${tx.description}` : ''}
