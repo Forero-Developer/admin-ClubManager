@@ -3,6 +3,7 @@ import { AppShell } from '@/components/layout/AppShell';
 import { authRoutes } from './authRoutes';
 import { dashboardRoutes } from './dashboardRoutes';
 import { clubsRoutes } from './clubsRoutes';
+import { organizersRoutes } from './organizersRoutes';
 import { playersRoutes } from './playersRoutes';
 import { subscriptionsRoutes } from './subscriptionsRoutes';
 import { plansRoutes } from './plansRoutes';
@@ -14,6 +15,7 @@ export const router = createBrowserRouter([
     children: [
       ...dashboardRoutes,
       ...clubsRoutes,
+      ...organizersRoutes,
       ...playersRoutes,
       ...subscriptionsRoutes,
       ...plansRoutes,

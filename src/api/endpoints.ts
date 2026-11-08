@@ -19,6 +19,11 @@ export const ENDPOINTS = {
     cancelRecurring: (id: string) => `/admin/clubs/${id}/payment-profile/cancel-recurring`,
     internal: (id: string) => `/admin/clubs/${id}/internal`,
   },
+  organizers: {
+    list: '/admin/organizers',
+    byId: (id: string) => `/admin/organizers/${id}`,
+    status: (id: string) => `/admin/organizers/${id}/status`,
+  },
   players: {
     list: (clubId: string) => `/admin/clubs/${clubId}/players`,
     byId: (clubId: string, playerId: string) => `/admin/clubs/${clubId}/players/${playerId}`,
