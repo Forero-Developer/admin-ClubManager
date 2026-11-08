@@ -4,9 +4,10 @@ import { ArrowLeft, Building2, Mail, MapPin, Phone, Power, Trash2, Trophy } from
 import { useOrganizerDetail } from './hooks/useOrganizers';
 import { DeleteOrganizerDialog } from './components/DeleteOrganizerDialog';
 import { OrganizerStatusDialog } from './components/OrganizerStatusDialog';
-import { Card, EmptyState, SectionTitle } from '@/components/ui/Card';
+import { OrganizerTournaments } from './components/OrganizerTournaments';
+import { Card, SectionTitle } from '@/components/ui/Card';
 import { StatusBadge } from '@/components/ui/Badge';
-import { ACCOUNT_STATUS, TOURNAMENT_STATUS } from '@/lib/status';
+import { ACCOUNT_STATUS } from '@/lib/status';
 import { formatDate, formatRelative } from '@/lib/format';
 
 export function OrganizerDetailPage() {
@@ -88,27 +89,7 @@ export function OrganizerDetailPage() {
         </div>
       </Card>
 
-      <section>
-        <SectionTitle>Torneos ({organizer.tournaments.length})</SectionTitle>
-        {organizer.tournaments.length === 0 ? (
-          <EmptyState icon={<Trophy size={22} />} title="Todavía no ha creado torneos" />
-        ) : (
-          <Card className="divide-y divide-border/60">
-            {organizer.tournaments.map((t) => (
-              <div key={t.id} className="flex flex-col gap-1 p-4 sm:flex-row sm:items-center sm:justify-between">
-                <div className="min-w-0">
-                  <p className="truncate font-semibold text-text">{t.name}</p>
-                  <p className="text-xs text-text-secondary">
-                    {t.startDate ? `Empieza ${formatDate(t.startDate)}` : `Creado ${formatRelative(t.createdAt)}`} · {t.invitedClubs}{' '}
-                    {t.invitedClubs === 1 ? 'club invitado' : 'clubes invitados'}
-                  </p>
-                </div>
-                <StatusBadge map={TOURNAMENT_STATUS} value={t.status} />
-              </div>
-            ))}
-          </Card>
-        )}
-      </section>
+      <OrganizerTournaments organizerId={organizer.id} total={organizer.tournamentsCount} />
 
       {organizer.clubs.length > 0 && (
         <section>
