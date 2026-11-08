@@ -23,6 +23,7 @@ export const ENDPOINTS = {
     list: '/admin/organizers',
     byId: (id: string) => `/admin/organizers/${id}`,
     status: (id: string) => `/admin/organizers/${id}/status`,
+    tournaments: (id: string) => `/admin/organizers/${id}/tournaments`,
   },
   players: {
     list: (clubId: string) => `/admin/clubs/${clubId}/players`,
