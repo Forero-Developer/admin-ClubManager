@@ -22,6 +22,22 @@ export const CLUB_STATUS: Record<string, StatusMeta> = {
   DELETED: { label: 'Eliminado', tone: 'neutral' },
 };
 
+/** Estado de una cuenta (ClubUser): organizadores y admins */
+export const ACCOUNT_STATUS: Record<string, StatusMeta> = {
+  ACTIVE: { label: 'Activa', tone: 'success', description: 'Puede entrar' },
+  INACTIVE: { label: 'Desactivada', tone: 'neutral', description: 'No puede entrar; sus datos se conservan' },
+  BANNED: { label: 'Bloqueada', tone: 'danger' },
+};
+
+export const TOURNAMENT_STATUS: Record<string, StatusMeta> = {
+  DRAFT: { label: 'Borrador', tone: 'neutral' },
+  REGISTRATION_OPEN: { label: 'Inscripciones abiertas', tone: 'info' },
+  REGISTRATION_CLOSED: { label: 'Inscripciones cerradas', tone: 'warning' },
+  IN_PROGRESS: { label: 'En juego', tone: 'success' },
+  COMPLETED: { label: 'Terminado', tone: 'trial' },
+  CANCELLED: { label: 'Cancelado', tone: 'danger' },
+};
+
 export const BILLING_STATUS: Record<string, StatusMeta> = {
   ACTIVE: { label: 'Al día', tone: 'success' },
   PAST_DUE: { label: 'En gracia', tone: 'warning' },
