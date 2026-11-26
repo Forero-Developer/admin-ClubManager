@@ -6,6 +6,7 @@ const keys = {
   all: ['organizers'] as const,
   list: (params?: OrganizerListQuery) => ['organizers', 'list', params] as const,
   detail: (id: string) => ['organizers', 'detail', id] as const,
+  tournaments: (id: string, page: number) => ['organizers', 'detail', id, 'tournaments', page] as const,
 };
 
 export function useOrganizers(params?: OrganizerListQuery) {
@@ -21,6 +22,15 @@ export function useOrganizerDetail(id: string | null) {
     queryKey: keys.detail(id ?? ''),
     queryFn: () => organizersService.getById(id as string),
     enabled: !!id,
+  });
+}
+
+export function useOrganizerTournaments(id: string, page: number, limit = 10) {
+  return useQuery({
+    queryKey: keys.tournaments(id, page),
+    queryFn: () => organizersService.getTournaments(id, { page, limit }),
+    enabled: !!id,
+    placeholderData: keepPreviousData,
   });
 }
 

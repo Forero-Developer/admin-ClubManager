@@ -1,12 +1,16 @@
 import { apiClient } from '@/api/client';
 import { ENDPOINTS } from '@/api/endpoints';
-import type { OrganizerDetail, OrganizerListQuery, OrganizersPage } from './organizers.types';
+import type { OrganizerDetail, OrganizerListQuery, OrganizersPage, OrganizerTournamentsPage } from './organizers.types';
 
 export const organizersService = {
   getAll: (params?: OrganizerListQuery) =>
     apiClient.get<unknown, OrganizersPage>(ENDPOINTS.organizers.list, { params }),
 
   getById: (id: string) => apiClient.get<unknown, OrganizerDetail>(ENDPOINTS.organizers.byId(id)),
+
+  /** Torneos del organizador, paginados en el servidor */
+  getTournaments: (id: string, params: { page: number; limit: number }) =>
+    apiClient.get<unknown, OrganizerTournamentsPage>(ENDPOINTS.organizers.tournaments(id), { params }),
 
   /** INACTIVE = desactivar (no puede entrar, se conservan sus torneos) */
   setStatus: (id: string, status: 'ACTIVE' | 'INACTIVE') =>

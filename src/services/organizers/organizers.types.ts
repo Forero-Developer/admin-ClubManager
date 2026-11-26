@@ -29,7 +29,6 @@ export interface OrganizerTournament {
 
 export interface OrganizerDetail extends OrganizerListItem {
   clubs: { id: string; name: string; role: string }[];
-  tournaments: OrganizerTournament[];
   deleteImpact: {
     tournaments: number;
     teams: number;
@@ -47,3 +46,4 @@ export interface OrganizerListQuery {
 }
 
 export type OrganizersPage = PaginatedResult<OrganizerListItem>;
+export type OrganizerTournamentsPage = PaginatedResult<OrganizerTournament>;
