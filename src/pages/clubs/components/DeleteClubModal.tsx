@@ -22,8 +22,8 @@ export function DeleteClubModal({ clubId, clubName, isOpen, onClose, onSuccess }
   const handleDelete = async () => {
     if (!isMatch) return;
     try {
-      await deleteClub(clubId);
-      toast.success('Club eliminado correctamente');
+      const result = await deleteClub(clubId);
+      toast.success(result?.message || 'Club eliminado');
       onClose();
       if (onSuccess) onSuccess();
     } catch (error: any) {
@@ -48,9 +48,10 @@ export function DeleteClubModal({ clubId, clubName, isOpen, onClose, onSuccess }
           <div className="bg-red-50 text-danger p-3 rounded-lg text-sm border border-red-100 flex items-start gap-3">
             <AlertTriangle className="flex-shrink-0 mt-0.5" size={16} />
             <div>
-              <p className="font-semibold mb-1">¡Esta acción es irreversible!</p>
+              <p className="font-semibold mb-1">El club dejará de funcionar</p>
               <p className="text-red-700/80">
-                Se eliminarán en cascada todos los datos de este club, incluyendo jugadores, torneos, archivos en S3 y toda la información asociada.
+                Nadie podrá entrar (admins, entrenadores ni acudientes) y no se enviarán más cobros. Los deportistas y todo su historial se conservan.
+                Solo si el club no tiene ningún deportista se borra del todo, con sus archivos.
               </p>
             </div>
           </div>

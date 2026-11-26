@@ -374,7 +374,7 @@ export function ClubDetailPage() {
       onSelect: toggleInternal,
       disabled: setInternalMutation.isPending,
     },
-    { label: 'Eliminar club', description: 'Borra el club y sus datos', icon: <Trash2 size={16} />, onSelect: () => setIsDeleteModalOpen(true), danger: true },
+    { label: 'Eliminar club', description: 'Lo cierra y conserva a sus deportistas', icon: <Trash2 size={16} />, onSelect: () => setIsDeleteModalOpen(true), danger: true },
   ];
 
   const billable = club.billablePlayersCount ?? club.playerStats?.billable ?? club._count.players;
